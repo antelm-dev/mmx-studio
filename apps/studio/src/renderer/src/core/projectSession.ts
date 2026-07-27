@@ -99,6 +99,39 @@ export class ProjectSession {
     return this.state.issues;
   }
 
+  async createFromStarter(): Promise<ProjectIssue[]> {
+    const bridge = window.studio?.project;
+    if (!bridge) {
+      return [{ severity: "error", code: "project.unavailable", path: "/", message: "Project I/O is only available in the Electron shell." }];
+    }
+
+    const rootPath = await bridge.pickDirectory("Create MMX Starter Project");
+    if (!rootPath) return [];
+
+    const name = window.prompt("Project name?", "MMX Project")?.trim();
+    if (!name) return [];
+
+    const id = name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, ".")
+      .replace(/^\.+|\.+$/g, "");
+    const projectId = id.length > 0 ? `${id}.project` : "mmx.project";
+
+    const result = await bridge.createFromStarter(rootPath, { id: projectId, name });
+    if (!result.ok) {
+      this.setState({ ...EMPTY, issues: result.issues });
+      return result.issues;
+    }
+
+    this.setState({
+      open: true,
+      rootPath: result.value.rootPath,
+      project: result.value.project,
+      issues: [...result.issues, ...validateOpenProject(result.value.project)],
+    });
+    return this.state.issues;
+  }
+
   async openProject(): Promise<ProjectIssue[]> {
     const bridge = window.studio?.project;
     if (!bridge) {

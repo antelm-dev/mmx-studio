@@ -25,6 +25,7 @@
     "@mmx/contracts": "file:../../../../mmx-core-ts/packages/contracts",
     "@mmx/editor-runtime": "workspace:*",
     "@mmx/project-io": "workspace:*",
+    "@mmx/starter-template": "workspace:*",
     "@mmx/project-schema": "file:../../../../.worktrees/mmx-core-assets-01/packages/project-schema",
     "@mmx/engine": "file:../../../../mmx-core-ts/packages/engine",
     "@mmx/renderer-pixi": "file:../../../../mmx-core-ts/packages/renderer-pixi",

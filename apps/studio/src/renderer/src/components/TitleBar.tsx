@@ -112,6 +112,9 @@ function FileMenu() {
       <DropdownMenu.Item className={ctxItemCls(false)} onSelect={() => void editor.createProject()}>
         <FolderKanban size={13} /> New Project…
       </DropdownMenu.Item>
+      <DropdownMenu.Item className={ctxItemCls(false)} onSelect={() => void editor.createFromStarter()}>
+        <LayoutTemplate size={13} /> New from MMX Starter…
+      </DropdownMenu.Item>
       <DropdownMenu.Item className={ctxItemCls(false)} onSelect={() => void editor.openProject()}>
         <FolderOpen size={13} /> Open Project…
       </DropdownMenu.Item>

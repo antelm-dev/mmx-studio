@@ -64,6 +64,9 @@ importers:
       '@mmx/runtime':
         specifier: file:../../../../mmx-core-ts/packages/runtime
         version: file:../../mmx-core-ts/packages/runtime
+      '@mmx/starter-template':
+        specifier: workspace:*
+        version: link:../../packages/starter-template
       '@monaco-editor/react':
         specifier: ^4.7.0
         version: 4.7.0(monaco-editor@0.56.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -213,6 +216,25 @@ importers:
       '@mmx/content-schema':
         specifier: file:../../../../mmx-core-ts/packages/content-schema
         version: file:../../mmx-core-ts/packages/content-schema
+      '@mmx/project-schema':
+        specifier: file:../../../mmx-core-assets-01/packages/project-schema
+        version: file:../mmx-core-assets-01/packages/project-schema
+    devDependencies:
+      '@types/node':
+        specifier: ^24.0.0
+        version: 24.13.3
+      tsx:
+        specifier: ^4.7.0
+        version: 4.23.1
+      typescript:
+        specifier: ^5.4.0
+        version: 5.9.3
+
+  packages/starter-template:
+    dependencies:
+      '@mmx/project-io':
+        specifier: workspace:*
+        version: link:../project-io
       '@mmx/project-schema':
         specifier: file:../../../mmx-core-assets-01/packages/project-schema
         version: file:../mmx-core-assets-01/packages/project-schema

@@ -247,6 +247,23 @@ export class EditorController {
     this.toast(`Project '${projectSession.getSnapshot().project?.manifest.name ?? ""}' created.`);
   }
 
+  async createFromStarter(): Promise<void> {
+    if (!this.confirmDiscardIfDirty("Create a new project from the MMX starter template?")) return;
+    if (this.store.get().mode === "play") this.togglePlay();
+    const issues = await projectSession.createFromStarter();
+    if (issues.some((issue) => issue.severity === "error")) {
+      this.toast(`Create starter project failed: ${issues[0]?.message ?? "validation error"}`);
+      return;
+    }
+    const entry = projectSession.getEntryLevelDocument();
+    if (!entry) {
+      this.toast("Starter project created but no entry level was found.");
+      return;
+    }
+    this.openDocument(entry);
+    this.toast(`MMX starter project '${projectSession.getSnapshot().project?.manifest.name ?? ""}' created.`);
+  }
+
   async openProject(): Promise<void> {
     if (!this.confirmDiscardIfDirty("Open another project?")) return;
     if (this.store.get().mode === "play") this.togglePlay();

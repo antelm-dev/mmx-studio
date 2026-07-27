@@ -15,6 +15,7 @@ import {
   type StudioProject,
 } from "@mmx/project-io";
 import { createNodeFileSystem } from "@mmx/project-io/node";
+import { copyStarterProjectToDirectory } from "@mmx/starter-template";
 
 export function createProjectIpc() {
   return defineIpcModule("project", {
@@ -60,6 +61,22 @@ export function createProjectIpc() {
       ): Promise<ProjectResult<ProjectPayload>> => {
         const fs = createNodeFileSystem(rootPath);
         const created = await createProject(fs, input);
+        if (!created.ok) return { ok: false, issues: created.issues };
+        return {
+          ok: true,
+          value: { rootPath, project: created.value },
+          issues: created.issues,
+        };
+      },
+    ),
+
+    "create-from-starter": handle(
+      async (
+        _event,
+        rootPath: string,
+        input: { id: string; name: string },
+      ): Promise<ProjectResult<ProjectPayload>> => {
+        const created = await copyStarterProjectToDirectory(rootPath, input);
         if (!created.ok) return { ok: false, issues: created.issues };
         return {
           ok: true,
