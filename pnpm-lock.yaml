@@ -5,15 +5,16 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
-  '@mmx/browser-audio': file:../mmx-core-ts/packages/browser-audio
-  '@mmx/browser-input': file:../mmx-core-ts/packages/browser-input
-  '@mmx/client-settings': file:../mmx-core-ts/packages/client-settings
-  '@mmx/content-schema': file:../mmx-core-ts/packages/content-schema
-  '@mmx/contracts': file:../mmx-core-ts/packages/contracts
-  '@mmx/engine': file:../mmx-core-ts/packages/engine
-  '@mmx/ldtk-tools': file:../mmx-core-ts/packages/ldtk-tools
-  '@mmx/renderer-pixi': file:../mmx-core-ts/packages/renderer-pixi
-  '@mmx/runtime': file:../mmx-core-ts/packages/runtime
+  '@mmx/browser-audio': file:../../mmx-core-ts/packages/browser-audio
+  '@mmx/browser-input': file:../../mmx-core-ts/packages/browser-input
+  '@mmx/client-settings': file:../../mmx-core-ts/packages/client-settings
+  '@mmx/content-schema': file:../../mmx-core-ts/packages/content-schema
+  '@mmx/contracts': file:../../mmx-core-ts/packages/contracts
+  '@mmx/engine': file:../../mmx-core-ts/packages/engine
+  '@mmx/ldtk-tools': file:../../mmx-core-ts/packages/ldtk-tools
+  '@mmx/project-schema': file:../../.worktrees/mmx-core-assets-01/packages/project-schema
+  '@mmx/renderer-pixi': file:../../mmx-core-ts/packages/renderer-pixi
+  '@mmx/runtime': file:../../mmx-core-ts/packages/runtime
 
 patchedDependencies:
   electron-ipc-module@0.1.0:
@@ -34,29 +35,35 @@ importers:
   apps/studio:
     dependencies:
       '@mmx/browser-audio':
-        specifier: file:../../../mmx-core-ts/packages/browser-audio
-        version: file:../mmx-core-ts/packages/browser-audio
+        specifier: file:../../../../mmx-core-ts/packages/browser-audio
+        version: file:../../mmx-core-ts/packages/browser-audio
       '@mmx/client-settings':
-        specifier: file:../../../mmx-core-ts/packages/client-settings
-        version: file:../mmx-core-ts/packages/client-settings
+        specifier: file:../../../../mmx-core-ts/packages/client-settings
+        version: file:../../mmx-core-ts/packages/client-settings
       '@mmx/content-schema':
-        specifier: file:../../../mmx-core-ts/packages/content-schema
-        version: file:../mmx-core-ts/packages/content-schema
+        specifier: file:../../../../mmx-core-ts/packages/content-schema
+        version: file:../../mmx-core-ts/packages/content-schema
       '@mmx/contracts':
-        specifier: file:../../../mmx-core-ts/packages/contracts
-        version: file:../mmx-core-ts/packages/contracts
+        specifier: file:../../../../mmx-core-ts/packages/contracts
+        version: file:../../mmx-core-ts/packages/contracts
       '@mmx/editor-runtime':
         specifier: workspace:*
         version: link:../../packages/editor-runtime
       '@mmx/engine':
-        specifier: file:../../../mmx-core-ts/packages/engine
-        version: file:../mmx-core-ts/packages/engine
+        specifier: file:../../../../mmx-core-ts/packages/engine
+        version: file:../../mmx-core-ts/packages/engine
+      '@mmx/project-io':
+        specifier: workspace:*
+        version: link:../../packages/project-io
+      '@mmx/project-schema':
+        specifier: file:../../../mmx-core-assets-01/packages/project-schema
+        version: file:../mmx-core-assets-01/packages/project-schema
       '@mmx/renderer-pixi':
-        specifier: file:../../../mmx-core-ts/packages/renderer-pixi
-        version: file:../mmx-core-ts/packages/renderer-pixi(pixi.js@8.19.0)
+        specifier: file:../../../../mmx-core-ts/packages/renderer-pixi
+        version: file:../../mmx-core-ts/packages/renderer-pixi(pixi.js@8.19.0)
       '@mmx/runtime':
-        specifier: file:../../../mmx-core-ts/packages/runtime
-        version: file:../mmx-core-ts/packages/runtime
+        specifier: file:../../../../mmx-core-ts/packages/runtime
+        version: file:../../mmx-core-ts/packages/runtime
       '@monaco-editor/react':
         specifier: ^4.7.0
         version: 4.7.0(monaco-editor@0.56.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -173,20 +180,20 @@ importers:
   packages/editor-runtime:
     dependencies:
       '@mmx/browser-input':
-        specifier: file:../../../mmx-core-ts/packages/browser-input
-        version: file:../mmx-core-ts/packages/browser-input
+        specifier: file:../../../../mmx-core-ts/packages/browser-input
+        version: file:../../mmx-core-ts/packages/browser-input
       '@mmx/content-schema':
-        specifier: file:../../../mmx-core-ts/packages/content-schema
-        version: file:../mmx-core-ts/packages/content-schema
+        specifier: file:../../../../mmx-core-ts/packages/content-schema
+        version: file:../../mmx-core-ts/packages/content-schema
       '@mmx/engine':
-        specifier: file:../../../mmx-core-ts/packages/engine
-        version: file:../mmx-core-ts/packages/engine
+        specifier: file:../../../../mmx-core-ts/packages/engine
+        version: file:../../mmx-core-ts/packages/engine
       '@mmx/renderer-pixi':
-        specifier: file:../../../mmx-core-ts/packages/renderer-pixi
-        version: file:../mmx-core-ts/packages/renderer-pixi(pixi.js@8.19.0)
+        specifier: file:../../../../mmx-core-ts/packages/renderer-pixi
+        version: file:../../mmx-core-ts/packages/renderer-pixi(pixi.js@8.19.0)
       '@mmx/runtime':
-        specifier: file:../../../mmx-core-ts/packages/runtime
-        version: file:../mmx-core-ts/packages/runtime
+        specifier: file:../../../../mmx-core-ts/packages/runtime
+        version: file:../../mmx-core-ts/packages/runtime
     devDependencies:
       '@types/node':
         specifier: ^24.0.0
@@ -194,6 +201,25 @@ importers:
       pixi.js:
         specifier: ^8.19.0
         version: 8.19.0
+      tsx:
+        specifier: ^4.7.0
+        version: 4.23.1
+      typescript:
+        specifier: ^5.4.0
+        version: 5.9.3
+
+  packages/project-io:
+    dependencies:
+      '@mmx/content-schema':
+        specifier: file:../../../../mmx-core-ts/packages/content-schema
+        version: file:../../mmx-core-ts/packages/content-schema
+      '@mmx/project-schema':
+        specifier: file:../../../mmx-core-assets-01/packages/project-schema
+        version: file:../mmx-core-assets-01/packages/project-schema
+    devDependencies:
+      '@types/node':
+        specifier: ^24.0.0
+        version: 24.13.3
       tsx:
         specifier: ^4.7.0
         version: 4.23.1
@@ -536,36 +562,40 @@ packages:
     resolution: {integrity: sha512-9QOtNffcOF/c1seMCDnjckb3R9WHcG34tky+FHpNKKCW0wc/scYLwMtO+ptyGUfMW0/b/n4qRiALlaFHc9Oj7Q==}
     engines: {node: '>= 10.0.0'}
 
-  '@mmx/browser-audio@file:../mmx-core-ts/packages/browser-audio':
-    resolution: {directory: ../mmx-core-ts/packages/browser-audio, type: directory}
+  '@mmx/browser-audio@file:../../mmx-core-ts/packages/browser-audio':
+    resolution: {directory: ../../mmx-core-ts/packages/browser-audio, type: directory}
 
-  '@mmx/browser-input@file:../mmx-core-ts/packages/browser-input':
-    resolution: {directory: ../mmx-core-ts/packages/browser-input, type: directory}
+  '@mmx/browser-input@file:../../mmx-core-ts/packages/browser-input':
+    resolution: {directory: ../../mmx-core-ts/packages/browser-input, type: directory}
     engines: {node: '>=24 <25'}
 
-  '@mmx/client-settings@file:../mmx-core-ts/packages/client-settings':
-    resolution: {directory: ../mmx-core-ts/packages/client-settings, type: directory}
+  '@mmx/client-settings@file:../../mmx-core-ts/packages/client-settings':
+    resolution: {directory: ../../mmx-core-ts/packages/client-settings, type: directory}
     engines: {node: '>=24 <25'}
 
-  '@mmx/content-schema@file:../mmx-core-ts/packages/content-schema':
-    resolution: {directory: ../mmx-core-ts/packages/content-schema, type: directory}
+  '@mmx/content-schema@file:../../mmx-core-ts/packages/content-schema':
+    resolution: {directory: ../../mmx-core-ts/packages/content-schema, type: directory}
     engines: {node: '>=24 <25'}
 
-  '@mmx/contracts@file:../mmx-core-ts/packages/contracts':
-    resolution: {directory: ../mmx-core-ts/packages/contracts, type: directory}
+  '@mmx/contracts@file:../../mmx-core-ts/packages/contracts':
+    resolution: {directory: ../../mmx-core-ts/packages/contracts, type: directory}
     engines: {node: '>=24 <25'}
 
-  '@mmx/engine@file:../mmx-core-ts/packages/engine':
-    resolution: {directory: ../mmx-core-ts/packages/engine, type: directory}
+  '@mmx/engine@file:../../mmx-core-ts/packages/engine':
+    resolution: {directory: ../../mmx-core-ts/packages/engine, type: directory}
     engines: {node: '>=24 <25'}
 
-  '@mmx/renderer-pixi@file:../mmx-core-ts/packages/renderer-pixi':
-    resolution: {directory: ../mmx-core-ts/packages/renderer-pixi, type: directory}
+  '@mmx/project-schema@file:../mmx-core-assets-01/packages/project-schema':
+    resolution: {directory: ../mmx-core-assets-01/packages/project-schema, type: directory}
+    engines: {node: '>=24 <25'}
+
+  '@mmx/renderer-pixi@file:../../mmx-core-ts/packages/renderer-pixi':
+    resolution: {directory: ../../mmx-core-ts/packages/renderer-pixi, type: directory}
     peerDependencies:
       pixi.js: ^8.19.0
 
-  '@mmx/runtime@file:../mmx-core-ts/packages/runtime':
-    resolution: {directory: ../mmx-core-ts/packages/runtime, type: directory}
+  '@mmx/runtime@file:../../mmx-core-ts/packages/runtime':
+    resolution: {directory: ../../mmx-core-ts/packages/runtime, type: directory}
     engines: {node: '>=24 <25'}
 
   '@monaco-editor/loader@1.7.0':
@@ -3254,40 +3284,42 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@mmx/browser-audio@file:../mmx-core-ts/packages/browser-audio':
+  '@mmx/browser-audio@file:../../mmx-core-ts/packages/browser-audio':
     dependencies:
-      '@mmx/engine': file:../mmx-core-ts/packages/engine
+      '@mmx/engine': file:../../mmx-core-ts/packages/engine
 
-  '@mmx/browser-input@file:../mmx-core-ts/packages/browser-input':
+  '@mmx/browser-input@file:../../mmx-core-ts/packages/browser-input':
     dependencies:
-      '@mmx/engine': file:../mmx-core-ts/packages/engine
+      '@mmx/engine': file:../../mmx-core-ts/packages/engine
 
-  '@mmx/client-settings@file:../mmx-core-ts/packages/client-settings':
+  '@mmx/client-settings@file:../../mmx-core-ts/packages/client-settings':
     dependencies:
-      '@mmx/engine': file:../mmx-core-ts/packages/engine
+      '@mmx/engine': file:../../mmx-core-ts/packages/engine
 
-  '@mmx/content-schema@file:../mmx-core-ts/packages/content-schema':
+  '@mmx/content-schema@file:../../mmx-core-ts/packages/content-schema':
     dependencies:
-      '@mmx/contracts': file:../mmx-core-ts/packages/contracts
+      '@mmx/contracts': file:../../mmx-core-ts/packages/contracts
 
-  '@mmx/contracts@file:../mmx-core-ts/packages/contracts': {}
+  '@mmx/contracts@file:../../mmx-core-ts/packages/contracts': {}
 
-  '@mmx/engine@file:../mmx-core-ts/packages/engine':
+  '@mmx/engine@file:../../mmx-core-ts/packages/engine':
     dependencies:
-      '@mmx/contracts': file:../mmx-core-ts/packages/contracts
+      '@mmx/contracts': file:../../mmx-core-ts/packages/contracts
 
-  '@mmx/renderer-pixi@file:../mmx-core-ts/packages/renderer-pixi(pixi.js@8.19.0)':
+  '@mmx/project-schema@file:../mmx-core-assets-01/packages/project-schema': {}
+
+  '@mmx/renderer-pixi@file:../../mmx-core-ts/packages/renderer-pixi(pixi.js@8.19.0)':
     dependencies:
-      '@mmx/content-schema': file:../mmx-core-ts/packages/content-schema
-      '@mmx/contracts': file:../mmx-core-ts/packages/contracts
-      '@mmx/engine': file:../mmx-core-ts/packages/engine
+      '@mmx/content-schema': file:../../mmx-core-ts/packages/content-schema
+      '@mmx/contracts': file:../../mmx-core-ts/packages/contracts
+      '@mmx/engine': file:../../mmx-core-ts/packages/engine
       pixi.js: 8.19.0
 
-  '@mmx/runtime@file:../mmx-core-ts/packages/runtime':
+  '@mmx/runtime@file:../../mmx-core-ts/packages/runtime':
     dependencies:
-      '@mmx/browser-input': file:../mmx-core-ts/packages/browser-input
-      '@mmx/client-settings': file:../mmx-core-ts/packages/client-settings
-      '@mmx/engine': file:../mmx-core-ts/packages/engine
+      '@mmx/browser-input': file:../../mmx-core-ts/packages/browser-input
+      '@mmx/client-settings': file:../../mmx-core-ts/packages/client-settings
+      '@mmx/engine': file:../../mmx-core-ts/packages/engine
 
   '@monaco-editor/loader@1.7.0':
     dependencies:

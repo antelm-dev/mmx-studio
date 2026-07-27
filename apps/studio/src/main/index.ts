@@ -3,6 +3,7 @@ import { app, BrowserWindow } from "electron";
 import { createIpcContainer } from "electron-ipc-module";
 import { env } from "./env.js";
 import { createFilesIpc } from "./ipc/files.ipc.js";
+import { createProjectIpc } from "./ipc/project.ipc.js";
 import { createWindowIpc } from "./ipc/window.ipc.js";
 
 const DEV_READY_TIMEOUT_MS = 30_000;
@@ -66,6 +67,7 @@ app.whenReady().then(async () => {
   const ipc = createIpcContainer();
   await ipc.loadAll({
     files: createFilesIpc(),
+    project: createProjectIpc(),
     window: createWindowIpc(),
   });
 
