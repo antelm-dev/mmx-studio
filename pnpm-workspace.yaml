@@ -1,5 +1,6 @@
 packages:
-  - .
+  - apps/*
+  - packages/*
 
 onlyBuiltDependencies:
   - electron
@@ -19,7 +20,6 @@ overrides:
   "@mmx/client-settings": "file:../mmx-core-ts/packages/client-settings"
   "@mmx/content-schema": "file:../mmx-core-ts/packages/content-schema"
   "@mmx/contracts": "file:../mmx-core-ts/packages/contracts"
-  "@mmx/editor-runtime": "file:../mmx-core-ts/packages/editor-runtime"
   "@mmx/engine": "file:../mmx-core-ts/packages/engine"
   "@mmx/ldtk-tools": "file:../mmx-core-ts/packages/ldtk-tools"
   "@mmx/renderer-pixi": "file:../mmx-core-ts/packages/renderer-pixi"
