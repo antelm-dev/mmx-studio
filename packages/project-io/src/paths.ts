@@ -3,6 +3,19 @@ import { isPortableRelativePath } from "@mmx/project-schema";
 export const PROJECT_MANIFEST = "project.json";
 export const LEVELS_DIR = "levels";
 export const ASSETS_DIR = "assets";
+export const GAME_DATA_DIR = "game";
+export const GAME_DATA_FILE = "game/data.json";
+export const CANONICAL_DATA_DIR = "data";
+export const CANONICAL_GAME_DATA_FILE = "data/game.json";
+export const CANONICAL_RENDERER_BINDINGS_FILE = "data/renderer-bindings.json";
+export const ATTRIBUTION_FILE = "ATTRIBUTION.md";
+
+export const PORTABLE_EXPORT_FILES = [
+  GAME_DATA_FILE,
+  CANONICAL_GAME_DATA_FILE,
+  CANONICAL_RENDERER_BINDINGS_FILE,
+  ATTRIBUTION_FILE,
+] as const;
 
 export class PathTraversalError extends Error {
   readonly code = "path.traversal" as const;

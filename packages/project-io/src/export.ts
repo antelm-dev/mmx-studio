@@ -1,10 +1,9 @@
 import { serializeProject, validateProject, type ProjectDocument } from "@mmx/project-schema";
 
 import type { FileSystem } from "./fs.js";
-import { PROJECT_MANIFEST } from "./paths.js";
-import { fail, issue, succeed, type ProjectResult } from "./model.js";
-import { filterReferencedAssets } from "./references.js";
-import type { StudioProject } from "./model.js";
+import { fail, issue, succeed, type ProjectResult, type StudioProject } from "./model.js";
+import { GAME_DATA_FILE, PORTABLE_EXPORT_FILES, PROJECT_MANIFEST } from "./paths.js";
+import { collectGameBindingAssetIds, filterReferencedAssets } from "./references.js";
 
 export type ExportProjectInput = {
   destinationExists?: "reject" | "merge";
@@ -14,8 +13,35 @@ export type ExportProjectResult = {
   manifestPath: string;
   exportedAssets: string[];
   exportedLevels: string[];
+  exportedDataFiles: string[];
   excludedOrphans: string[];
 };
+
+async function copyPortableProjectFiles(
+  sourceFs: FileSystem,
+  destFs: FileSystem,
+): Promise<string[]> {
+  const copied: string[] = [];
+  for (const relative of PORTABLE_EXPORT_FILES) {
+    if (!(await sourceFs.exists(relative))) continue;
+    const content = await sourceFs.readText(relative);
+    await destFs.writeText(relative, content);
+    copied.push(relative);
+  }
+  return copied;
+}
+
+async function readBindingAssetIds(sourceFs: FileSystem): Promise<string[]> {
+  if (!(await sourceFs.exists(GAME_DATA_FILE))) return [];
+  try {
+    const raw = JSON.parse(await sourceFs.readText(GAME_DATA_FILE)) as {
+      bindings?: Record<string, unknown>;
+    };
+    return [...collectGameBindingAssetIds(raw)];
+  } catch {
+    return [];
+  }
+}
 
 async function assertDestinationClean(
   fs: FileSystem,
@@ -57,7 +83,12 @@ export async function exportProject(
   }
 
   const levelDocuments = project.levels.map((level) => level.document);
-  const referencedAssets = filterReferencedAssets(project.manifest, levelDocuments);
+  const bindingAssetIds = await readBindingAssetIds(sourceFs);
+  const referencedAssets = filterReferencedAssets(
+    project.manifest,
+    levelDocuments,
+    bindingAssetIds,
+  );
   const orphanIds = new Set(
     project.manifest.assets
       .filter((asset) => !referencedAssets.some((entry) => entry.id === asset.id))
@@ -111,11 +142,13 @@ export async function exportProject(
 
   const manifestJson = serializeProject(exportedManifest);
   await destFs.writeText(PROJECT_MANIFEST, manifestJson);
+  const exportedDataFiles = await copyPortableProjectFiles(sourceFs, destFs);
 
   return succeed({
     manifestPath: PROJECT_MANIFEST,
     exportedAssets,
     exportedLevels,
+    exportedDataFiles,
     excludedOrphans: [...orphanIds],
   });
 }

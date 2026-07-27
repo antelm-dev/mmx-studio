@@ -1,3 +1,5 @@
+import { access, mkdir, writeFile } from "node:fs/promises";
+import { dirname } from "node:path";
 import ipcBridge from "electron-ipc-module/rollup-plugin";
 
 /**
@@ -6,6 +8,13 @@ import ipcBridge from "electron-ipc-module/rollup-plugin";
  * build regenerates it too (same plugin), but those steps don't invoke Rollup.
  */
 const outFile = "./src/preload/generated/ipc-bridge.ts";
+
+try {
+  await access(outFile);
+} catch {
+  await mkdir(dirname(outFile), { recursive: true });
+  await writeFile(outFile, "export const bridge = {} as never;\n", "utf8");
+}
 
 const plugin = ipcBridge({
   ipcDir: "./src/main/ipc",

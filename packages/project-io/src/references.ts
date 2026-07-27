@@ -1,11 +1,34 @@
 import type { LevelDocument } from "@mmx/content-schema";
 import type { ProjectAsset, ProjectDocument } from "@mmx/project-schema";
 
+export function collectGameBindingAssetIds(gameData: {
+  bindings?: Record<string, unknown>;
+}): Set<string> {
+  const ids = new Set<string>();
+  const bindings = gameData.bindings;
+  if (!bindings || typeof bindings !== "object") return ids;
+
+  const visit = (value: unknown): void => {
+    if (typeof value === "string") {
+      ids.add(value);
+      return;
+    }
+    if (!value || typeof value !== "object") return;
+    for (const entry of Object.values(value)) visit(entry);
+  };
+
+  visit(bindings);
+  return ids;
+}
+
 export function collectReferencedAssetIds(
   manifest: ProjectDocument,
   levels: LevelDocument[],
+  extraIds: Iterable<string> = [],
 ): Set<string> {
   const referenced = new Set<string>();
+
+  for (const id of extraIds) referenced.add(id);
 
   for (const level of levels) {
     for (const decoration of level.decorations) {
@@ -33,15 +56,17 @@ export function collectReferencedAssetIds(
 export function filterReferencedAssets(
   manifest: ProjectDocument,
   levels: LevelDocument[],
+  extraIds: Iterable<string> = [],
 ): ProjectAsset[] {
-  const referenced = collectReferencedAssetIds(manifest, levels);
+  const referenced = collectReferencedAssetIds(manifest, levels, extraIds);
   return manifest.assets.filter((asset) => referenced.has(asset.id));
 }
 
 export function findOrphanAssets(
   manifest: ProjectDocument,
   levels: LevelDocument[],
+  extraIds: Iterable<string> = [],
 ): ProjectAsset[] {
-  const referenced = collectReferencedAssetIds(manifest, levels);
+  const referenced = collectReferencedAssetIds(manifest, levels, extraIds);
   return manifest.assets.filter((asset) => !referenced.has(asset.id));
 }
