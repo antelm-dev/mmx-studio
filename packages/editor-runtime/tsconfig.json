@@ -11,10 +11,10 @@
   },
   "include": ["src/**/*.ts"],
   "references": [
-    { "path": "../../../mmx-core-ts/packages/engine" },
-    { "path": "../../../mmx-core-ts/packages/browser-input" },
-    { "path": "../../../mmx-core-ts/packages/runtime" },
-    { "path": "../../../mmx-core-ts/packages/content-schema" },
-    { "path": "../../../mmx-core-ts/packages/renderer-pixi" }
+    { "path": "../../../../mmx-core-ts/packages/engine" },
+    { "path": "../../../../mmx-core-ts/packages/browser-input" },
+    { "path": "../../../../mmx-core-ts/packages/runtime" },
+    { "path": "../../../../mmx-core-ts/packages/content-schema" },
+    { "path": "../../../../mmx-core-ts/packages/renderer-pixi" }
   ]
 }

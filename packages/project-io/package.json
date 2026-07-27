@@ -1,5 +1,5 @@
 {
-  "name": "@mmx/editor-runtime",
+  "name": "@mmx/project-io",
   "version": "1.0.0",
   "private": true,
   "files": [
@@ -14,32 +14,26 @@
       "import": "./dist/index.js",
       "default": "./dist/index.js"
     },
-    "./adapters": {
-      "types": "./dist/adapters/index.d.ts",
-      "import": "./dist/adapters/index.js",
-      "default": "./dist/adapters/index.js"
+    "./node": {
+      "types": "./dist/node.d.ts",
+      "import": "./dist/node.js",
+      "default": "./dist/node.js"
     }
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "prepack": "pnpm run build",
-    "test": "node --import tsx --test tests/*.test.ts"
+    "test": "node --import tsx --test tests/*.test.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@mmx/browser-input": "file:../../../../mmx-core-ts/packages/browser-input",
     "@mmx/content-schema": "file:../../../../mmx-core-ts/packages/content-schema",
-    "@mmx/engine": "file:../../../../mmx-core-ts/packages/engine",
-    "@mmx/renderer-pixi": "file:../../../../mmx-core-ts/packages/renderer-pixi",
-    "@mmx/runtime": "file:../../../../mmx-core-ts/packages/runtime"
+    "@mmx/project-schema": "file:../../../../.worktrees/mmx-core-assets-01/packages/project-schema"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
-    "pixi.js": "^8.19.0",
     "tsx": "^4.7.0",
     "typescript": "^5.4.0"
-  },
-  "peerDependencies": {
-    "pixi.js": "^8.19.0"
   },
   "engines": {
     "node": ">=24 <25"

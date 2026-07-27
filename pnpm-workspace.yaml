@@ -15,12 +15,13 @@ patchedDependencies:
 # Core packages still use workspace:* internally. Override those transitive
 # references while Studio consumes the packages from the sibling repository.
 overrides:
-  "@mmx/browser-audio": "file:../mmx-core-ts/packages/browser-audio"
-  "@mmx/browser-input": "file:../mmx-core-ts/packages/browser-input"
-  "@mmx/client-settings": "file:../mmx-core-ts/packages/client-settings"
-  "@mmx/content-schema": "file:../mmx-core-ts/packages/content-schema"
-  "@mmx/contracts": "file:../mmx-core-ts/packages/contracts"
-  "@mmx/engine": "file:../mmx-core-ts/packages/engine"
-  "@mmx/ldtk-tools": "file:../mmx-core-ts/packages/ldtk-tools"
-  "@mmx/renderer-pixi": "file:../mmx-core-ts/packages/renderer-pixi"
-  "@mmx/runtime": "file:../mmx-core-ts/packages/runtime"
+  "@mmx/browser-audio": "file:../../mmx-core-ts/packages/browser-audio"
+  "@mmx/browser-input": "file:../../mmx-core-ts/packages/browser-input"
+  "@mmx/client-settings": "file:../../mmx-core-ts/packages/client-settings"
+  "@mmx/content-schema": "file:../../mmx-core-ts/packages/content-schema"
+  "@mmx/contracts": "file:../../mmx-core-ts/packages/contracts"
+  "@mmx/engine": "file:../../mmx-core-ts/packages/engine"
+  "@mmx/ldtk-tools": "file:../../mmx-core-ts/packages/ldtk-tools"
+  "@mmx/project-schema": "file:../../.worktrees/mmx-core-assets-01/packages/project-schema"
+  "@mmx/renderer-pixi": "file:../../mmx-core-ts/packages/renderer-pixi"
+  "@mmx/runtime": "file:../../mmx-core-ts/packages/runtime"
