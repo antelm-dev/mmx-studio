@@ -7,13 +7,13 @@ import { parseArgs } from "node:util";
 
 import {
   copyStarterProjectToDirectory,
-} from "../packages/starter-template/dist/index.js";
+} from "../dist/starter-template/index.js";
 import {
   exportProject,
   saveProject,
   updateLevelDocument,
-} from "../packages/project-io/dist/index.js";
-import { createNodeFileSystem } from "../packages/project-io/dist/node.js";
+} from "../dist/project-io/index.js";
+import { createNodeFileSystem } from "../dist/project-io/node.js";
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const studioRoot = resolve(scriptDir, "..");

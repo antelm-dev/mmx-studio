@@ -5,16 +5,16 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
-  '@mmx/browser-audio': file:../../mmx-core-ts/packages/browser-audio
-  '@mmx/browser-input': file:../../mmx-core-ts/packages/browser-input
-  '@mmx/client-settings': file:../../mmx-core-ts/packages/client-settings
-  '@mmx/content-schema': file:../../mmx-core-ts/packages/content-schema
-  '@mmx/contracts': file:../../mmx-core-ts/packages/contracts
-  '@mmx/engine': file:../../mmx-core-ts/packages/engine
-  '@mmx/ldtk-tools': file:../../mmx-core-ts/packages/ldtk-tools
-  '@mmx/project-schema': file:../../.worktrees/mmx-core-assets-01/packages/project-schema
-  '@mmx/renderer-pixi': file:../../mmx-core-ts/packages/renderer-pixi
-  '@mmx/runtime': file:../../mmx-core-ts/packages/runtime
+  '@mmx/browser-audio': file:../mmx-core-ts/packages/browser-audio
+  '@mmx/browser-input': file:../mmx-core-ts/packages/browser-input
+  '@mmx/client-settings': file:../mmx-core-ts/packages/client-settings
+  '@mmx/content-schema': file:../mmx-core-ts/packages/content-schema
+  '@mmx/contracts': file:../mmx-core-ts/packages/contracts
+  '@mmx/engine': file:../mmx-core-ts/packages/engine
+  '@mmx/ldtk-tools': file:../mmx-core-ts/packages/ldtk-tools
+  '@mmx/project-schema': file:../mmx-core-ts/packages/project-schema
+  '@mmx/renderer-pixi': file:../mmx-core-ts/packages/renderer-pixi
+  '@mmx/runtime': file:../mmx-core-ts/packages/runtime
 
 patchedDependencies:
   electron-ipc-module@0.1.0:
@@ -24,49 +24,34 @@ patchedDependencies:
 importers:
 
   .:
-    devDependencies:
-      turbo:
-        specifier: 2.10.7
-        version: 2.10.7
-      typescript:
-        specifier: ^5.4.0
-        version: 5.9.3
-
-  apps/studio:
     dependencies:
       '@mmx/browser-audio':
-        specifier: file:../../../../mmx-core-ts/packages/browser-audio
-        version: file:../../mmx-core-ts/packages/browser-audio
+        specifier: file:../mmx-core-ts/packages/browser-audio
+        version: file:../mmx-core-ts/packages/browser-audio
+      '@mmx/browser-input':
+        specifier: file:../mmx-core-ts/packages/browser-input
+        version: file:../mmx-core-ts/packages/browser-input
       '@mmx/client-settings':
-        specifier: file:../../../../mmx-core-ts/packages/client-settings
-        version: file:../../mmx-core-ts/packages/client-settings
+        specifier: file:../mmx-core-ts/packages/client-settings
+        version: file:../mmx-core-ts/packages/client-settings
       '@mmx/content-schema':
-        specifier: file:../../../../mmx-core-ts/packages/content-schema
-        version: file:../../mmx-core-ts/packages/content-schema
+        specifier: file:../mmx-core-ts/packages/content-schema
+        version: file:../mmx-core-ts/packages/content-schema
       '@mmx/contracts':
-        specifier: file:../../../../mmx-core-ts/packages/contracts
-        version: file:../../mmx-core-ts/packages/contracts
-      '@mmx/editor-runtime':
-        specifier: workspace:*
-        version: link:../../packages/editor-runtime
+        specifier: file:../mmx-core-ts/packages/contracts
+        version: file:../mmx-core-ts/packages/contracts
       '@mmx/engine':
-        specifier: file:../../../../mmx-core-ts/packages/engine
-        version: file:../../mmx-core-ts/packages/engine
-      '@mmx/project-io':
-        specifier: workspace:*
-        version: link:../../packages/project-io
+        specifier: file:../mmx-core-ts/packages/engine
+        version: file:../mmx-core-ts/packages/engine
       '@mmx/project-schema':
-        specifier: file:../../../mmx-core-assets-01/packages/project-schema
-        version: file:../mmx-core-assets-01/packages/project-schema
+        specifier: file:../mmx-core-ts/packages/project-schema
+        version: file:../mmx-core-ts/packages/project-schema
       '@mmx/renderer-pixi':
-        specifier: file:../../../../mmx-core-ts/packages/renderer-pixi
-        version: file:../../mmx-core-ts/packages/renderer-pixi(pixi.js@8.19.0)
+        specifier: file:../mmx-core-ts/packages/renderer-pixi
+        version: file:../mmx-core-ts/packages/renderer-pixi(pixi.js@8.19.0)
       '@mmx/runtime':
-        specifier: file:../../../../mmx-core-ts/packages/runtime
-        version: file:../../mmx-core-ts/packages/runtime
-      '@mmx/starter-template':
-        specifier: workspace:*
-        version: link:../../packages/starter-template
+        specifier: file:../mmx-core-ts/packages/runtime
+        version: file:../mmx-core-ts/packages/runtime
       '@monaco-editor/react':
         specifier: ^4.7.0
         version: 4.7.0(monaco-editor@0.56.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -119,6 +104,9 @@ importers:
       '@playwright/test':
         specifier: ^1.61.1
         version: 1.62.0
+      '@rollup/plugin-alias':
+        specifier: ^6.0.0
+        version: 6.0.0(rollup@4.62.3)
       '@rollup/plugin-commonjs':
         specifier: ^28.0.2
         version: 28.0.9(rollup@4.62.3)
@@ -170,6 +158,9 @@ importers:
       tslib:
         specifier: ^2.8.1
         version: 2.8.1
+      tsx:
+        specifier: ^4.7.0
+        version: 4.23.1
       typescript:
         specifier: ^5.4.0
         version: 5.9.3
@@ -179,75 +170,6 @@ importers:
       vitest:
         specifier: ^4.1.10
         version: 4.1.10(@types/node@24.13.3)(vite@7.3.6(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.49.0)(tsx@4.23.1))
-
-  packages/editor-runtime:
-    dependencies:
-      '@mmx/browser-input':
-        specifier: file:../../../../mmx-core-ts/packages/browser-input
-        version: file:../../mmx-core-ts/packages/browser-input
-      '@mmx/content-schema':
-        specifier: file:../../../../mmx-core-ts/packages/content-schema
-        version: file:../../mmx-core-ts/packages/content-schema
-      '@mmx/engine':
-        specifier: file:../../../../mmx-core-ts/packages/engine
-        version: file:../../mmx-core-ts/packages/engine
-      '@mmx/renderer-pixi':
-        specifier: file:../../../../mmx-core-ts/packages/renderer-pixi
-        version: file:../../mmx-core-ts/packages/renderer-pixi(pixi.js@8.19.0)
-      '@mmx/runtime':
-        specifier: file:../../../../mmx-core-ts/packages/runtime
-        version: file:../../mmx-core-ts/packages/runtime
-    devDependencies:
-      '@types/node':
-        specifier: ^24.0.0
-        version: 24.13.3
-      pixi.js:
-        specifier: ^8.19.0
-        version: 8.19.0
-      tsx:
-        specifier: ^4.7.0
-        version: 4.23.1
-      typescript:
-        specifier: ^5.4.0
-        version: 5.9.3
-
-  packages/project-io:
-    dependencies:
-      '@mmx/content-schema':
-        specifier: file:../../../../mmx-core-ts/packages/content-schema
-        version: file:../../mmx-core-ts/packages/content-schema
-      '@mmx/project-schema':
-        specifier: file:../../../mmx-core-assets-01/packages/project-schema
-        version: file:../mmx-core-assets-01/packages/project-schema
-    devDependencies:
-      '@types/node':
-        specifier: ^24.0.0
-        version: 24.13.3
-      tsx:
-        specifier: ^4.7.0
-        version: 4.23.1
-      typescript:
-        specifier: ^5.4.0
-        version: 5.9.3
-
-  packages/starter-template:
-    dependencies:
-      '@mmx/project-io':
-        specifier: workspace:*
-        version: link:../project-io
-      '@mmx/project-schema':
-        specifier: file:../../../mmx-core-assets-01/packages/project-schema
-        version: file:../mmx-core-assets-01/packages/project-schema
-    devDependencies:
-      '@types/node':
-        specifier: ^24.0.0
-        version: 24.13.3
-      tsx:
-        specifier: ^4.7.0
-        version: 4.23.1
-      typescript:
-        specifier: ^5.4.0
-        version: 5.9.3
 
 packages:
 
@@ -584,40 +506,40 @@ packages:
     resolution: {integrity: sha512-9QOtNffcOF/c1seMCDnjckb3R9WHcG34tky+FHpNKKCW0wc/scYLwMtO+ptyGUfMW0/b/n4qRiALlaFHc9Oj7Q==}
     engines: {node: '>= 10.0.0'}
 
-  '@mmx/browser-audio@file:../../mmx-core-ts/packages/browser-audio':
-    resolution: {directory: ../../mmx-core-ts/packages/browser-audio, type: directory}
+  '@mmx/browser-audio@file:../mmx-core-ts/packages/browser-audio':
+    resolution: {directory: ../mmx-core-ts/packages/browser-audio, type: directory}
 
-  '@mmx/browser-input@file:../../mmx-core-ts/packages/browser-input':
-    resolution: {directory: ../../mmx-core-ts/packages/browser-input, type: directory}
+  '@mmx/browser-input@file:../mmx-core-ts/packages/browser-input':
+    resolution: {directory: ../mmx-core-ts/packages/browser-input, type: directory}
     engines: {node: '>=24 <25'}
 
-  '@mmx/client-settings@file:../../mmx-core-ts/packages/client-settings':
-    resolution: {directory: ../../mmx-core-ts/packages/client-settings, type: directory}
+  '@mmx/client-settings@file:../mmx-core-ts/packages/client-settings':
+    resolution: {directory: ../mmx-core-ts/packages/client-settings, type: directory}
     engines: {node: '>=24 <25'}
 
-  '@mmx/content-schema@file:../../mmx-core-ts/packages/content-schema':
-    resolution: {directory: ../../mmx-core-ts/packages/content-schema, type: directory}
+  '@mmx/content-schema@file:../mmx-core-ts/packages/content-schema':
+    resolution: {directory: ../mmx-core-ts/packages/content-schema, type: directory}
     engines: {node: '>=24 <25'}
 
-  '@mmx/contracts@file:../../mmx-core-ts/packages/contracts':
-    resolution: {directory: ../../mmx-core-ts/packages/contracts, type: directory}
+  '@mmx/contracts@file:../mmx-core-ts/packages/contracts':
+    resolution: {directory: ../mmx-core-ts/packages/contracts, type: directory}
     engines: {node: '>=24 <25'}
 
-  '@mmx/engine@file:../../mmx-core-ts/packages/engine':
-    resolution: {directory: ../../mmx-core-ts/packages/engine, type: directory}
+  '@mmx/engine@file:../mmx-core-ts/packages/engine':
+    resolution: {directory: ../mmx-core-ts/packages/engine, type: directory}
     engines: {node: '>=24 <25'}
 
-  '@mmx/project-schema@file:../mmx-core-assets-01/packages/project-schema':
-    resolution: {directory: ../mmx-core-assets-01/packages/project-schema, type: directory}
+  '@mmx/project-schema@file:../mmx-core-ts/packages/project-schema':
+    resolution: {directory: ../mmx-core-ts/packages/project-schema, type: directory}
     engines: {node: '>=24 <25'}
 
-  '@mmx/renderer-pixi@file:../../mmx-core-ts/packages/renderer-pixi':
-    resolution: {directory: ../../mmx-core-ts/packages/renderer-pixi, type: directory}
+  '@mmx/renderer-pixi@file:../mmx-core-ts/packages/renderer-pixi':
+    resolution: {directory: ../mmx-core-ts/packages/renderer-pixi, type: directory}
     peerDependencies:
       pixi.js: ^8.19.0
 
-  '@mmx/runtime@file:../../mmx-core-ts/packages/runtime':
-    resolution: {directory: ../../mmx-core-ts/packages/runtime, type: directory}
+  '@mmx/runtime@file:../mmx-core-ts/packages/runtime':
+    resolution: {directory: ../mmx-core-ts/packages/runtime, type: directory}
     engines: {node: '>=24 <25'}
 
   '@monaco-editor/loader@1.7.0':
@@ -1006,6 +928,15 @@ packages:
   '@rolldown/pluginutils@1.0.0-rc.3':
     resolution: {integrity: sha512-eybk3TjzzzV97Dlj5c+XrBFW57eTNhzod66y9HrBlzJ6NsCrWCp/2kaPS3K9wJmurBC0Tdw4yPjXKZqlznim3Q==}
 
+  '@rollup/plugin-alias@6.0.0':
+    resolution: {integrity: sha512-tPCzJOtS7uuVZd+xPhoy5W4vThe6KWXNmsFCNktaAh5RTqcLiSfT4huPQIXkgJ6YCOjJHvecOAzQxLFhPxKr+g==}
+    engines: {node: '>=20.19.0'}
+    peerDependencies:
+      rollup: '>=4.0.0'
+    peerDependenciesMeta:
+      rollup:
+        optional: true
+
   '@rollup/plugin-commonjs@28.0.9':
     resolution: {integrity: sha512-PIR4/OHZ79romx0BVVll/PkwWpJ7e5lsqFa3gFfcrFPWwLXLV39JVUzQV9RKjWerE7B845Hqjj9VYlQeieZ2dA==}
     engines: {node: '>=16.0.0 || 14 >= 14.17'}
@@ -1335,36 +1266,6 @@ packages:
 
   '@tanstack/virtual-core@3.17.6':
     resolution: {integrity: sha512-h0/Ebo18CkOrChlQIhNtQkM5ySUnh/GumQ/D1st3hG2HWUPEF+ILUc2k29UtivCi/9G7w7G3/f7Xyd5cCFbKBw==}
-
-  '@turbo/darwin-64@2.10.7':
-    resolution: {integrity: sha512-/c9cSBRermWDv85oufLhoH6XRLOVbvzJLRd+WLyfJCP+i0HFLQj4PVNDrHcY17/ve5l8X0Oua4bJBqJUgJPnZA==}
-    cpu: [x64]
-    os: [darwin]
-
-  '@turbo/darwin-arm64@2.10.7':
-    resolution: {integrity: sha512-8lpCCGWZBl9PIF8w8f2iEWrLMbHBWIfJeV6l2UEGqysD6HRIM4ySj/8R7HGEzbECJ4r/gnJcHmxEoG8yjFe64A==}
-    cpu: [arm64]
-    os: [darwin]
-
-  '@turbo/linux-64@2.10.7':
-    resolution: {integrity: sha512-Midw9Ed00yw9rqkWN82fY3LmLNFQ6yiL1GXB56DJKUEjWaEd27zh7ohCxzzrjfjQVrEeVWd3UPytTAV16XDQlA==}
-    cpu: [x64]
-    os: [linux]
-
-  '@turbo/linux-arm64@2.10.7':
-    resolution: {integrity: sha512-UVEy+MW/xn4BcsiV3v3uv0/oObyaQgVtRT+Jj4WE53rNH05VEYEc1Z13q3zV6276wCZR4Yxc4hiTTcjw7PjSpg==}
-    cpu: [arm64]
-    os: [linux]
-
-  '@turbo/windows-64@2.10.7':
-    resolution: {integrity: sha512-l2nH9KGLV46SWjcXvyc2+xo5gdf5J0NVADknQk9OCJhzJBpiNl/byd26yIfwZBjLupdqT6UOdPhPxcpUPxRykQ==}
-    cpu: [x64]
-    os: [win32]
-
-  '@turbo/windows-arm64@2.10.7':
-    resolution: {integrity: sha512-qjE1apG6RThuX49vUJd5ks2dV2ndXC2qktDChQonFMvUzrMrEnZMQzO+IgxBiYq1j+NbXQcRwj84nGnk1TBw1g==}
-    cpu: [arm64]
-    os: [win32]
 
   '@types/babel__core@7.20.5':
     resolution: {integrity: sha512-qoQprZvz5wQFJwMDqeseRXWv3rqMvhgpbXFfVyWhbx9X47POIA6i/+dXefEmZKoAgOaTdaIgNSMqMIU61yRyzA==}
@@ -2734,10 +2635,6 @@ packages:
     engines: {node: '>=18.0.0'}
     hasBin: true
 
-  turbo@2.10.7:
-    resolution: {integrity: sha512-GHx6WExIFSKNJ5qMlzDpXBXlu9ApxaMjqxAVrCNcW94xf/+uqgIz41SAuRUMbXva2ExNAaY/h8V0q90SWSzmRw==}
-    hasBin: true
-
   type-fest@0.13.1:
     resolution: {integrity: sha512-34R7HTnG0XIJcBSn5XhDd7nNFPRcXYRZrBB2O2jdKqYODldSzBAqzsWoZYYvduky73toYS/ESqxPvkDf/F0XMg==}
     engines: {node: '>=10'}
@@ -3306,42 +3203,46 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@mmx/browser-audio@file:../../mmx-core-ts/packages/browser-audio':
+  '@mmx/browser-audio@file:../mmx-core-ts/packages/browser-audio':
     dependencies:
-      '@mmx/engine': file:../../mmx-core-ts/packages/engine
+      '@mmx/engine': file:../mmx-core-ts/packages/engine
+      '@mmx/project-schema': file:../mmx-core-ts/packages/project-schema
 
-  '@mmx/browser-input@file:../../mmx-core-ts/packages/browser-input':
+  '@mmx/browser-input@file:../mmx-core-ts/packages/browser-input':
     dependencies:
-      '@mmx/engine': file:../../mmx-core-ts/packages/engine
+      '@mmx/engine': file:../mmx-core-ts/packages/engine
 
-  '@mmx/client-settings@file:../../mmx-core-ts/packages/client-settings':
+  '@mmx/client-settings@file:../mmx-core-ts/packages/client-settings':
     dependencies:
-      '@mmx/engine': file:../../mmx-core-ts/packages/engine
+      '@mmx/engine': file:../mmx-core-ts/packages/engine
 
-  '@mmx/content-schema@file:../../mmx-core-ts/packages/content-schema':
+  '@mmx/content-schema@file:../mmx-core-ts/packages/content-schema':
     dependencies:
-      '@mmx/contracts': file:../../mmx-core-ts/packages/contracts
+      '@mmx/contracts': file:../mmx-core-ts/packages/contracts
 
-  '@mmx/contracts@file:../../mmx-core-ts/packages/contracts': {}
+  '@mmx/contracts@file:../mmx-core-ts/packages/contracts': {}
 
-  '@mmx/engine@file:../../mmx-core-ts/packages/engine':
+  '@mmx/engine@file:../mmx-core-ts/packages/engine':
     dependencies:
-      '@mmx/contracts': file:../../mmx-core-ts/packages/contracts
+      '@mmx/contracts': file:../mmx-core-ts/packages/contracts
 
-  '@mmx/project-schema@file:../mmx-core-assets-01/packages/project-schema': {}
-
-  '@mmx/renderer-pixi@file:../../mmx-core-ts/packages/renderer-pixi(pixi.js@8.19.0)':
+  '@mmx/project-schema@file:../mmx-core-ts/packages/project-schema':
     dependencies:
-      '@mmx/content-schema': file:../../mmx-core-ts/packages/content-schema
-      '@mmx/contracts': file:../../mmx-core-ts/packages/contracts
-      '@mmx/engine': file:../../mmx-core-ts/packages/engine
+      semver: 7.8.5
+
+  '@mmx/renderer-pixi@file:../mmx-core-ts/packages/renderer-pixi(pixi.js@8.19.0)':
+    dependencies:
+      '@mmx/content-schema': file:../mmx-core-ts/packages/content-schema
+      '@mmx/contracts': file:../mmx-core-ts/packages/contracts
+      '@mmx/engine': file:../mmx-core-ts/packages/engine
+      '@mmx/project-schema': file:../mmx-core-ts/packages/project-schema
       pixi.js: 8.19.0
 
-  '@mmx/runtime@file:../../mmx-core-ts/packages/runtime':
+  '@mmx/runtime@file:../mmx-core-ts/packages/runtime':
     dependencies:
-      '@mmx/browser-input': file:../../mmx-core-ts/packages/browser-input
-      '@mmx/client-settings': file:../../mmx-core-ts/packages/client-settings
-      '@mmx/engine': file:../../mmx-core-ts/packages/engine
+      '@mmx/browser-input': file:../mmx-core-ts/packages/browser-input
+      '@mmx/client-settings': file:../mmx-core-ts/packages/client-settings
+      '@mmx/engine': file:../mmx-core-ts/packages/engine
 
   '@monaco-editor/loader@1.7.0':
     dependencies:
@@ -3725,6 +3626,10 @@ snapshots:
 
   '@rolldown/pluginutils@1.0.0-rc.3': {}
 
+  '@rollup/plugin-alias@6.0.0(rollup@4.62.3)':
+    optionalDependencies:
+      rollup: 4.62.3
+
   '@rollup/plugin-commonjs@28.0.9(rollup@4.62.3)':
     dependencies:
       '@rollup/pluginutils': 5.4.0(rollup@4.62.3)
@@ -3951,24 +3856,6 @@ snapshots:
   '@tanstack/table-core@8.21.3': {}
 
   '@tanstack/virtual-core@3.17.6': {}
-
-  '@turbo/darwin-64@2.10.7':
-    optional: true
-
-  '@turbo/darwin-arm64@2.10.7':
-    optional: true
-
-  '@turbo/linux-64@2.10.7':
-    optional: true
-
-  '@turbo/linux-arm64@2.10.7':
-    optional: true
-
-  '@turbo/windows-64@2.10.7':
-    optional: true
-
-  '@turbo/windows-arm64@2.10.7':
-    optional: true
 
   '@types/babel__core@7.20.5':
     dependencies:
@@ -5419,15 +5306,6 @@ snapshots:
       esbuild: 0.28.1
     optionalDependencies:
       fsevents: 2.3.3
-
-  turbo@2.10.7:
-    optionalDependencies:
-      '@turbo/darwin-64': 2.10.7
-      '@turbo/darwin-arm64': 2.10.7
-      '@turbo/linux-64': 2.10.7
-      '@turbo/linux-arm64': 2.10.7
-      '@turbo/windows-64': 2.10.7
-      '@turbo/windows-arm64': 2.10.7
 
   type-fest@0.13.1:
     optional: true

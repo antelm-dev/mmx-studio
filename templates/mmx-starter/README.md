@@ -21,11 +21,11 @@ ATTRIBUTION.md        Third-party and fan-work attribution
 
 ## Maintaining assets
 
-Animation metadata generators live in `packages/starter-template/scripts/`.
+Animation metadata generators live in `scripts/starter-template/`.
 After refreshing animation JSON from a Godot export:
 
 ```powershell
-cd packages/starter-template
+cd mmx-studio
 node scripts/build-anims.mjs [path-to-godot-project]
 node scripts/build-enemies.mjs [path-to-godot-project]
 node scripts/build-pickups.mjs [path-to-godot-project]
