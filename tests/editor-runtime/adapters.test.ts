@@ -1,12 +1,24 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 
-import { stage1, stage2, Tile, type LevelData } from "@mmx/engine";
+import { Tile, type LevelData } from "@mmx/engine";
 import { SCHEMA_VERSION, TerrainTile, type LevelDocument } from "@mmx/content-schema";
 import {
   documentToLevelData,
   levelDataToDocument,
 } from "../../src/editor-runtime/adapters/index.js";
+
+function readDemoDocument(name: string): LevelDocument {
+  return JSON.parse(
+    readFileSync(new URL(`../../templates/mmx-demo/levels/${name}.json`, import.meta.url), "utf8"),
+  ) as LevelDocument;
+}
+
+const stage1Document = readDemoDocument("level.stage-1");
+const stage2Document = readDemoDocument("level.mechanics-demo");
+const stage1 = documentToLevelData(stage1Document);
+const stage2 = documentToLevelData(stage2Document);
 
 function roundTrip(data: LevelData): void {
   const doc = levelDataToDocument(data);
@@ -14,11 +26,11 @@ function roundTrip(data: LevelData): void {
   assert.deepEqual(back, data, "documentToLevelData ∘ levelDataToDocument is identity");
 }
 
-test("Stage 1 round-trips through the editor document unchanged", () => {
+test("demo Stage 1 round-trips through the editor document unchanged", () => {
   roundTrip(stage1);
 });
 
-test("Stage 2 round-trips through the editor document unchanged", () => {
+test("demo mechanics level round-trips through the editor document unchanged", () => {
   roundTrip(stage2);
 });
 
