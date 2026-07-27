@@ -6,6 +6,7 @@ import {
   Code2,
   Copy,
   FilePlus2,
+  FolderKanban,
   FolderOpen,
   Grid3x3,
   History,
@@ -17,6 +18,7 @@ import {
   Moon,
   RotateCcw,
   Save,
+  Share2,
   Square,
   Sun,
   X,
@@ -24,7 +26,7 @@ import {
   ZoomOut,
 } from "lucide-react";
 import { PANELS, resetLayout, togglePanel, useOpenPanelIds } from "../app/dock.js";
-import { editor, useEditorSnapshot } from "../app/useEditor.js";
+import { editor, useEditorSnapshot, useProjectSession } from "../app/useEditor.js";
 import { useUiStore } from "../store/uiStore.js";
 import { cx, ctxItemCls, menu, menuLabel, menuSep, menuShortcut } from "../ui.js";
 
@@ -101,10 +103,27 @@ export function TitleBar() {
 
 function FileMenu() {
   const snap = useEditorSnapshot();
+  const project = useProjectSession();
   const hasRecovery = editor.hasRecoveryDraft();
 
   return (
     <MenuRoot label="File" ariaLabel="File menu">
+      <DropdownMenu.Label className={menuLabel}>Project</DropdownMenu.Label>
+      <DropdownMenu.Item className={ctxItemCls(false)} onSelect={() => void editor.createProject()}>
+        <FolderKanban size={13} /> New Project…
+      </DropdownMenu.Item>
+      <DropdownMenu.Item className={ctxItemCls(false)} onSelect={() => void editor.openProject()}>
+        <FolderOpen size={13} /> Open Project…
+      </DropdownMenu.Item>
+      <DropdownMenu.Item
+        className={ctxItemCls(!project.open)}
+        disabled={!project.open}
+        onSelect={() => void editor.exportProject()}
+      >
+        <Share2 size={13} /> Export Project…
+      </DropdownMenu.Item>
+      <DropdownMenu.Separator className={menuSep} />
+      <DropdownMenu.Label className={menuLabel}>Level</DropdownMenu.Label>
       <DropdownMenu.Item className={ctxItemCls(false)} onSelect={() => editor.newLevel()}>
         <FilePlus2 size={13} /> New Level
         <span className={menuShortcut}>{modLabel}+N</span>

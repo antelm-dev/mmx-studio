@@ -7,8 +7,9 @@ import {
   type ColumnDef,
 } from "@tanstack/react-table";
 import type { ValidationIssue } from "@mmx/content-schema";
+import type { ProjectIssue } from "@mmx/project-io";
 import type { DockviewPanelApi } from "dockview-react";
-import { editor, useEditorSnapshot } from "../app/useEditor.js";
+import { editor, useEditorSnapshot, useProjectSession } from "../app/useEditor.js";
 import { cx, panel, scroll } from "../ui.js";
 
 const dot = "inline-block w-2 h-2 rounded-full flex-none";
@@ -21,8 +22,16 @@ const cellCls = (id: string): string =>
       ? "text-muted font-mono text-[10px] whitespace-nowrap"
       : "";
 
-const column = createColumnHelper<ValidationIssue>();
-const problemColumns: ColumnDef<ValidationIssue, string>[] = [
+type ProblemRow = {
+  severity: "error" | "warning";
+  code: string;
+  message: string;
+  objectId?: string;
+  path?: string;
+};
+
+const column = createColumnHelper<ProblemRow>();
+const problemColumns: ColumnDef<ProblemRow, string>[] = [
   column.display({
     id: "dot",
     cell: (ctx) => (
@@ -30,27 +39,53 @@ const problemColumns: ColumnDef<ValidationIssue, string>[] = [
         className={cx(dot, ctx.row.original.severity === "error" ? "bg-danger" : "bg-warning")}
       />
     ),
-  }) as ColumnDef<ValidationIssue, string>,
+  }) as ColumnDef<ProblemRow, string>,
   column.accessor("message", { id: "msg", cell: (c) => c.getValue() }),
   column.accessor("code", { id: "code", cell: (c) => c.getValue() }),
 ];
 
+function toProblemRows(
+  levelIssues: ValidationIssue[],
+  projectIssues: ProjectIssue[],
+): ProblemRow[] {
+  const projectRows = projectIssues.map((issue) => ({
+    severity: issue.severity,
+    code: issue.code,
+    message: `${issue.path}: ${issue.message}`,
+    path: issue.path,
+  }));
+  const levelRows = levelIssues.map((issue) => ({
+    severity: issue.severity,
+    code: issue.code,
+    message: issue.message,
+    objectId: issue.objectId,
+  }));
+  return [...projectRows, ...levelRows];
+}
+
 /** Movable dock panel: the live validation Problems table. Tab title tracks the issue count. */
 export function ProblemsPanel({ api }: { api?: DockviewPanelApi }): ReactElement {
   const snap = useEditorSnapshot();
+  const project = useProjectSession();
   const validation = snap.validation;
+  const issues = toProblemRows(validation.issues, project.issues);
+  const errorCount =
+    validation.errorCount + project.issues.filter((issue) => issue.severity === "error").length;
+  const warningCount =
+    validation.warningCount +
+    project.issues.filter((issue) => issue.severity === "warning").length;
 
   const problemsTitle = useMemo(() => {
-    if (validation.errorCount + validation.warningCount === 0) return "Problems";
-    const e = `${validation.errorCount} error${validation.errorCount === 1 ? "" : "s"}`;
-    const w = `${validation.warningCount} warning${validation.warningCount === 1 ? "" : "s"}`;
+    if (errorCount + warningCount === 0) return "Problems";
+    const e = `${errorCount} error${errorCount === 1 ? "" : "s"}`;
+    const w = `${warningCount} warning${warningCount === 1 ? "" : "s"}`;
     return `Problems — ${e}, ${w}`;
-  }, [validation]);
+  }, [errorCount, warningCount]);
 
   useEffect(() => api?.setTitle(problemsTitle), [api, problemsTitle]);
 
   const table = useReactTable({
-    data: validation.issues,
+    data: issues,
     columns: problemColumns,
     getCoreRowModel: getCoreRowModel(),
   });
@@ -58,7 +93,7 @@ export function ProblemsPanel({ api }: { api?: DockviewPanelApi }): ReactElement
   return (
     <div className={panel}>
       <div className={scroll}>
-        {validation.issues.length === 0 ? (
+        {issues.length === 0 ? (
           <div className="px-3 py-3.5 text-xs text-[#7f91aa]">
             <span className={cx(dot, "bg-success mr-[7px]")} /> No problems detected. Ready to play.
           </div>

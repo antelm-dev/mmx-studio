@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { editor, type EditorSnapshot } from "./EditorController.js";
+import { projectSession, type ProjectSessionState } from "../core/projectSession.js";
 import type { PlaytestSnapshot } from "@mmx/editor-runtime";
 
 /**
@@ -20,4 +21,12 @@ export function usePlaytestSnapshot(): PlaytestSnapshot {
   );
 }
 
-export { editor };
+export function useProjectSession(): ProjectSessionState {
+  return useSyncExternalStore(
+    projectSession.subscribe,
+    projectSession.getSnapshot,
+    projectSession.getSnapshot,
+  );
+}
+
+export { editor, projectSession };

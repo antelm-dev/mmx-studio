@@ -38,6 +38,7 @@ import {
 } from "../core/persistence.js";
 import { useUiStore } from "../store/uiStore.js";
 import { ensureStudioClientSettings } from "../settings/studioClientSettings.js";
+import { projectSession } from "../core/projectSession.js";
 
 const ZOOM_STEP = 1.2;
 
@@ -135,7 +136,14 @@ export class EditorController {
 
   private onStoreChange(reason: ChangeReason): void {
     this.viewport?.redraw();
-    if (reason === "document" || reason === "open") writeRecovery(this.store.get().document);
+    if (reason === "document" || reason === "open") {
+      writeRecovery(this.store.get().document);
+      const project = projectSession.getSnapshot().project;
+      if (project) {
+        const levelId = project.manifest.entryLevelId;
+        projectSession.syncLevel(levelId, this.store.get().document);
+      }
+    }
     this.snapshot = this.build(reason);
     this.emit();
   }
@@ -203,10 +211,66 @@ export class EditorController {
 
   private async saveAsync(): Promise<void> {
     const doc = this.store.get().document;
+    const projectState = projectSession.getSnapshot();
+    if (projectState.open && projectState.project) {
+      projectSession.syncLevel(projectState.project.manifest.entryLevelId, doc);
+      const issues = await projectSession.saveProject();
+      if (issues.some((issue) => issue.severity === "error")) {
+        this.toast(`Project save failed: ${issues[0]?.message ?? "validation error"}`);
+        return;
+      }
+      this.store.markSaved();
+      this.toast("Project saved.");
+      return;
+    }
+
     const ok = await this.fileAccess.save(doc.id || doc.name || "level", serializeDocument(doc));
     if (!ok) return;
     this.store.markSaved();
     this.toast("Level saved.");
+  }
+
+  async createProject(): Promise<void> {
+    if (!this.confirmDiscardIfDirty("Create a new project?")) return;
+    if (this.store.get().mode === "play") this.togglePlay();
+    const issues = await projectSession.createProject();
+    if (issues.some((issue) => issue.severity === "error")) {
+      this.toast(`Create project failed: ${issues[0]?.message ?? "validation error"}`);
+      return;
+    }
+    const entry = projectSession.getEntryLevelDocument();
+    if (!entry) {
+      this.toast("Project created but no entry level was found.");
+      return;
+    }
+    this.openDocument(entry);
+    this.toast(`Project '${projectSession.getSnapshot().project?.manifest.name ?? ""}' created.`);
+  }
+
+  async openProject(): Promise<void> {
+    if (!this.confirmDiscardIfDirty("Open another project?")) return;
+    if (this.store.get().mode === "play") this.togglePlay();
+    const issues = await projectSession.openProject();
+    if (issues.some((issue) => issue.severity === "error")) {
+      this.toast(`Open project failed: ${issues[0]?.message ?? "validation error"}`);
+      return;
+    }
+    const entry = projectSession.getEntryLevelDocument();
+    if (!entry) {
+      this.toast("Project opened but no entry level was found.");
+      return;
+    }
+    this.openDocument(entry);
+    this.toast(`Opened project '${projectSession.getSnapshot().project?.manifest.name ?? ""}'.`);
+  }
+
+  async exportProject(): Promise<void> {
+    const issues = await projectSession.exportProject();
+    if (issues.some((issue) => issue.severity === "error")) {
+      this.toast(`Export failed: ${issues[0]?.message ?? "validation error"}`);
+      return;
+    }
+    this.toast("Project exported.");
   }
 
   async openLevel(): Promise<void> {
