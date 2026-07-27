@@ -1,0 +1,17 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true,
+    "lib": ["ES2020"],
+    "outDir": "dist",
+    "rootDir": "src",
+    "tsBuildInfoFile": "tsconfig.tsbuildinfo"
+  },
+  "include": ["src/**/*.ts"],
+  "references": [
+    { "path": "../project-io" },
+    { "path": "../../../../.worktrees/mmx-core-assets-01/packages/project-schema" }
+  ]
+}
