@@ -1,0 +1,172 @@
+import { instanceSize, requireDefinition, type LevelObjectInstance } from "@mmx/content-schema";
+
+// ---------- Types ----------
+
+export interface Box {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+export type Handle = "nw" | "n" | "ne" | "e" | "se" | "s" | "sw" | "w";
+export const HANDLES: Handle[] = ["nw", "n", "ne", "e", "se", "s", "sw", "w"];
+export const HANDLE_HIT_PX = 7;
+
+// ---------- Box helpers ----------
+
+export function boxOf(inst: LevelObjectInstance): Box {
+  const { width, height } = instanceSize(inst);
+  return { x: inst.x, y: inst.y, w: width, h: height };
+}
+
+export function normalizeBox(x0: number, y0: number, x1: number, y1: number): Box {
+  const x = Math.min(x0, x1);
+  const y = Math.min(y0, y1);
+  return { x, y, w: Math.abs(x1 - x0), h: Math.abs(y1 - y0) };
+}
+
+export function boxesIntersect(a: Box, b: Box): boolean {
+  return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+}
+
+// ---------- Handle geometry ----------
+
+export function handlePos(b: Box, h: Handle): { x: number; y: number } {
+  const midX = b.x + b.w / 2;
+  const midY = b.y + b.h / 2;
+  switch (h) {
+    case "nw":
+      return { x: b.x, y: b.y };
+    case "n":
+      return { x: midX, y: b.y };
+    case "ne":
+      return { x: b.x + b.w, y: b.y };
+    case "e":
+      return { x: b.x + b.w, y: midY };
+    case "se":
+      return { x: b.x + b.w, y: b.y + b.h };
+    case "s":
+      return { x: midX, y: b.y + b.h };
+    case "sw":
+      return { x: b.x, y: b.y + b.h };
+    default:
+      return { x: b.x, y: midY };
+  }
+}
+
+/**
+ * Given screen-space client coords and the world-to-screen projection, return
+ * which resize handle (if any) is hit on the given box.
+ */
+export function handleHitTest(
+  b: Box,
+  clientX: number,
+  clientY: number,
+  canvasRect: DOMRect,
+  zoom: number,
+  viewportX: number,
+  viewportY: number,
+): Handle | null {
+  for (const h of HANDLES) {
+    const wp = handlePos(b, h);
+    const sx = (wp.x - viewportX) * zoom;
+    const sy = (wp.y - viewportY) * zoom;
+    const dx = clientX - canvasRect.left - sx;
+    const dy = clientY - canvasRect.top - sy;
+    if (Math.abs(dx) <= HANDLE_HIT_PX && Math.abs(dy) <= HANDLE_HIT_PX) return h;
+  }
+  return null;
+}
+
+// ---------- Object resizability ----------
+
+export function singleResizableObject(
+  objects: readonly LevelObjectInstance[],
+  selectedIds: readonly string[],
+): LevelObjectInstance | null {
+  if (selectedIds.length !== 1) return null;
+  const inst = objects.find((o) => o.id === selectedIds[0]);
+  if (!inst) return null;
+  return requireDefinition(inst.definitionId).editor.resizable ? inst : null;
+}
+
+// ---------- Tile grid helpers ----------
+
+/**
+ * Compute the row-major tile index for a world position, or null when out of bounds.
+ */
+export function tileIndexAt(
+  wx: number,
+  wy: number,
+  cols: number,
+  rows: number,
+  gridSize: number,
+): number | null {
+  const col = Math.floor(wx / gridSize);
+  const row = Math.floor(wy / gridSize);
+  if (col < 0 || row < 0 || col >= cols || row >= rows) return null;
+  return row * cols + col;
+}
+
+/**
+ * Return the tile indices whose cells intersect the given box.
+ * Only non-empty cells are included (callers must supply `isSolid`).
+ */
+export function tilesIntersecting(
+  box: Box,
+  cols: number,
+  rows: number,
+  gridSize: number,
+  isSolid: (index: number) => boolean,
+): number[] {
+  const col0 = Math.max(0, Math.floor(box.x / gridSize));
+  const row0 = Math.max(0, Math.floor(box.y / gridSize));
+  const col1 = Math.min(cols - 1, Math.ceil((box.x + box.w) / gridSize) - 1);
+  const row1 = Math.min(rows - 1, Math.ceil((box.y + box.h) / gridSize) - 1);
+  if (col1 < col0 || row1 < row0) return [];
+  const out: number[] = [];
+  for (let row = row0; row <= row1; row++) {
+    for (let col = col0; col <= col1; col++) {
+      const index = row * cols + col;
+      if (!isSolid(index)) continue;
+      const cell: Box = { x: col * gridSize, y: row * gridSize, w: gridSize, h: gridSize };
+      if (boxesIntersect(cell, box)) out.push(index);
+    }
+  }
+  return out;
+}
+
+/**
+ * Clamp a tile-move delta so no selected tile leaves the grid.
+ */
+export function clampTileDelta(
+  indices: readonly number[],
+  cols: number,
+  rows: number,
+  dCol: number,
+  dRow: number,
+): { dCol: number; dRow: number } {
+  let minCol = Infinity;
+  let maxCol = -Infinity;
+  let minRow = Infinity;
+  let maxRow = -Infinity;
+  for (const index of indices) {
+    const col = index % cols;
+    const row = Math.floor(index / cols);
+    minCol = Math.min(minCol, col);
+    maxCol = Math.max(maxCol, col);
+    minRow = Math.min(minRow, row);
+    maxRow = Math.max(maxRow, row);
+  }
+  return {
+    dCol: Math.max(-minCol, Math.min(cols - 1 - maxCol, dCol)),
+    dRow: Math.max(-minRow, Math.min(rows - 1 - maxRow, dRow)),
+  };
+}
+
+// ---------- Misc ----------
+
+export function hexToNum(hex: string): number {
+  return Number.parseInt(hex.replace("#", ""), 16);
+}
