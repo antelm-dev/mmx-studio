@@ -159,9 +159,11 @@ export function clampTileDelta(
     minRow = Math.min(minRow, row);
     maxRow = Math.max(maxRow, row);
   }
+  const clampedCol = Math.max(-minCol, Math.min(cols - 1 - maxCol, dCol));
+  const clampedRow = Math.max(-minRow, Math.min(rows - 1 - maxRow, dRow));
   return {
-    dCol: Math.max(-minCol, Math.min(cols - 1 - maxCol, dCol)),
-    dRow: Math.max(-minRow, Math.min(rows - 1 - maxRow, dRow)),
+    dCol: clampedCol === 0 ? 0 : clampedCol,
+    dRow: clampedRow === 0 ? 0 : clampedRow,
   };
 }
 
