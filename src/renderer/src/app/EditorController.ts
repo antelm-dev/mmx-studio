@@ -5,7 +5,6 @@ import {
   type ValidationResult,
 } from "@mmx/content-schema";
 import { decorationBounds } from "@mmx/renderer-pixi";
-import { GameplaySounds, SoundEffects } from "@mmx/browser-audio";
 import {
   emptySelection,
   type EditorSelection,
@@ -21,12 +20,7 @@ import {
   setTileAt,
 } from "../core/actions.js";
 import { EditorViewport } from "../core/EditorViewport.js";
-import {
-  createPlaytest,
-  STOPPED_PLAYTEST,
-  type EditorPlaytestSession,
-  type PlaytestSnapshot,
-} from "@mmx/editor-runtime";
+import { type PlaytestSnapshot } from "@mmx/editor-runtime";
 import {
   createFileAccess,
   parseDocument,
@@ -34,19 +28,11 @@ import {
   readRecoveryJson,
   serializeDocument,
   writeRecovery,
-  type FileAccess,
 } from "../core/persistence.js";
 import { useUiStore } from "../store/uiStore.js";
-import { ensureStudioClientSettings } from "../settings/studioClientSettings.js";
 import { projectSession } from "../core/projectSession.js";
-import {
-  resolveStudioAssetUrl,
-  studioAssetCatalog,
-  studioProject,
-  studioRendererManifest,
-  studioSoundAssetIds,
-  studioSoundBindings,
-} from "../assets/studioAssets.js";
+import { EditorPlaytestController } from "./EditorPlaytestController.js";
+import { dispatchEditorKey, type KeyboardContext } from "./editorKeyboard.js";
 
 const ZOOM_STEP = 1.2;
 
@@ -74,25 +60,40 @@ export interface EditorSnapshot {
 export class EditorController {
   readonly store = new EditorStore(createLevelDocument());
 
-  private readonly fileAccess: FileAccess = createFileAccess();
+  private readonly fileAccess = createFileAccess();
   private viewport: EditorViewport | null = null;
-  private play: EditorPlaytestSession | null = null;
-  private audio: GameplaySounds | null = null;
-  /** Bumped on every startPlay so an async renderer creation can detect it was superseded. */
-  private playToken = 0;
   private host: HTMLElement | null = null;
-
-  private savedView: { zoom: number; viewportPosition: { x: number; y: number } } | null = null;
-  private savedSelection: EditorSelection = emptySelection();
 
   private snapshot: EditorSnapshot;
   private readonly listeners = new Set<() => void>();
 
-  /** Playtest/debugger state, kept out of {@link EditorStore} and the authored document. */
-  private playtestSnapshot: PlaytestSnapshot = STOPPED_PLAYTEST;
-  private readonly playtestListeners = new Set<() => void>();
+  private readonly playtest: EditorPlaytestController;
 
   constructor() {
+    this.playtest = new EditorPlaytestController(this.store, {
+      getHost: () => this.host,
+      getFileAccess: () => this.fileAccess,
+      validate: () => this.store.validate(),
+      toast: (msg) => this.toast(msg),
+      focusObject: (id) => this.focusObject(id),
+      onModeChange: (mode) => {
+        if (mode === "play") {
+          this.store.setMode("play");
+        } else {
+          this.store.setMode("edit");
+          this.viewport?.setVisible(true);
+          this.viewport?.redraw();
+        }
+      },
+      setViewportVisible: (visible) => this.viewport?.setVisible(visible),
+      restoreViewAndSelection: (zoom, viewportPosition, selection) => {
+        this.store.setView(zoom, viewportPosition);
+        this.store.setSelection(selection);
+        this.viewport?.redraw();
+      },
+      togglePlaytestInspector: () => useUiStore.getState().togglePlaytestInspector(),
+    });
+
     this.snapshot = this.build("open");
     this.store.subscribe((_, reason) => this.onStoreChange(reason));
     this.syncPageTitle(this.snapshot.levelTitle);
@@ -104,26 +105,13 @@ export class EditorController {
     this.listeners.add(fn);
     return () => this.listeners.delete(fn);
   };
-
   getSnapshot = (): EditorSnapshot => this.snapshot;
-
-  private emit(): void {
-    for (const fn of this.listeners) fn();
-  }
+  private emit(): void { for (const fn of this.listeners) fn(); }
 
   // ---------- Playtest React binding ----------
 
-  subscribePlaytest = (fn: () => void): (() => void) => {
-    this.playtestListeners.add(fn);
-    return () => this.playtestListeners.delete(fn);
-  };
-
-  getPlaytestSnapshot = (): PlaytestSnapshot => this.playtestSnapshot;
-
-  private setPlaytestSnapshot(snapshot: PlaytestSnapshot): void {
-    this.playtestSnapshot = snapshot;
-    for (const fn of this.playtestListeners) fn();
-  }
+  subscribePlaytest = (fn: () => void): (() => void) => this.playtest.subscribe(fn);
+  getPlaytestSnapshot = (): PlaytestSnapshot => this.playtest.getSnapshot();
 
   private computeTitle(): string {
     return this.store.get().document.name || "Untitled";
@@ -173,10 +161,7 @@ export class EditorController {
     this.viewport = null;
     this.host = null;
   }
-
-  closeEmptyContextMenu(): void {
-    useUiStore.getState().setContextMenu(null);
-  }
+  closeEmptyContextMenu(): void { useUiStore.getState().setContextMenu(null); }
 
   openEmptyContextMenuAt(clientX: number, clientY: number): void {
     const payload = this.viewport?.emptyContextAt(clientX, clientY) ?? null;
@@ -213,9 +198,7 @@ export class EditorController {
     this.toast("New level created.");
   }
 
-  save(): void {
-    void this.saveAsync();
-  }
+  save(): void { void this.saveAsync(); }
 
   private async saveAsync(): Promise<void> {
     const doc = this.store.get().document;
@@ -269,7 +252,9 @@ export class EditorController {
       return;
     }
     this.openDocument(entry);
-    this.toast(`MMX starter project '${projectSession.getSnapshot().project?.manifest.name ?? ""}' created.`);
+    this.toast(
+      `MMX starter project '${projectSession.getSnapshot().project?.manifest.name ?? ""}' created.`,
+    );
   }
 
   async openProject(): Promise<void> {
@@ -350,53 +335,31 @@ export class EditorController {
     this.viewport?.redraw();
   }
 
-  private syncPageTitle(title: string): void {
-    document.title = `${title} · MMX Studio`;
-  }
+  private syncPageTitle(title: string): void { document.title = `${title} · MMX Studio`; }
 
   // ---------- History ----------
 
-  undo(): void {
-    this.store.undo();
-  }
-  redo(): void {
-    this.store.redo();
-  }
+  undo(): void { this.store.undo(); }
+  redo(): void { this.store.redo(); }
 
   // ---------- View ----------
 
-  zoomBy(factor: number): void {
-    this.viewport?.zoomByCentered(factor);
-  }
-  zoomIn(): void {
-    this.zoomBy(ZOOM_STEP);
-  }
-  zoomOut(): void {
-    this.zoomBy(1 / ZOOM_STEP);
-  }
+  zoomBy(factor: number): void { this.viewport?.zoomByCentered(factor); }
+  zoomIn(): void { this.zoomBy(ZOOM_STEP); }
+  zoomOut(): void { this.zoomBy(1 / ZOOM_STEP); }
   setZoom(zoom: number): void {
     const current = this.store.get().zoom;
     if (current <= 0 || current === zoom) return;
     this.zoomBy(zoom / current);
   }
-  fit(): void {
-    this.viewport?.fitToDocument();
-  }
-  toggleGrid(): void {
-    this.store.toggleGrid();
-  }
-  toggleSnap(): void {
-    this.store.toggleSnap();
-  }
+  fit(): void { this.viewport?.fitToDocument(); }
+  toggleGrid(): void { this.store.toggleGrid(); }
+  toggleSnap(): void { this.store.toggleSnap(); }
 
   // ---------- Objects ----------
 
-  duplicateSelection(): void {
-    duplicateSelection(this.store);
-  }
-  deleteSelection(): void {
-    deleteSelection(this.store);
-  }
+  duplicateSelection(): void { duplicateSelection(this.store); }
+  deleteSelection(): void { deleteSelection(this.store); }
 
   selectPalette(definitionId: string): void {
     const state = this.store.get();
@@ -435,317 +398,72 @@ export class EditorController {
 
   /** Add/remove an object from the current selection without recentering. */
   toggleObjectSelection(id: string): void {
-    if (!this.store.get().document.objects.some((o) => o.id === id)) return;
-    this.store.toggleObjectInSelection(id);
+    if (this.store.get().document.objects.some((o) => o.id === id))
+      this.store.toggleObjectInSelection(id);
   }
-
   toggleDecorationSelection(id: string): void {
-    if (!this.store.get().document.decorations.some((d) => d.id === id)) return;
-    this.store.toggleDecorationInSelection(id);
+    if (this.store.get().document.decorations.some((d) => d.id === id))
+      this.store.toggleDecorationInSelection(id);
   }
 
   // ---------- Play ----------
 
-  togglePlay(): void {
-    if (this.store.get().mode === "play") this.stopPlay();
-    else void this.startPlay();
-  }
-
-  private async startPlay(): Promise<void> {
-    if (!this.host) return;
-    const audio = this.getAudio();
-    // This stays before the first await so a toolbar click or keyboard shortcut
-    // satisfies browser/Electron autoplay policy.
-    audio.unlock();
-    this.closeEmptyContextMenu();
-
-    const settings = await ensureStudioClientSettings().catch((error: unknown) => {
-      this.toast(`settings load failed: ${error instanceof Error ? error.message : String(error)}`);
-      return null;
-    });
-    if (!settings) return;
-    audio.setMasterVolume(settings.snapshot().audio.masterVolume);
-
-    const result = this.store.validate();
-    if (!result.ok) {
-      this.toast(
-        `Fix ${result.errorCount} error${result.errorCount === 1 ? "" : "s"} before playing.`,
-      );
-      return;
-    }
-    const state = this.store.get();
-    this.savedView = { zoom: state.zoom, viewportPosition: { ...state.viewportPosition } };
-    this.savedSelection =
-      state.selection.kind === "objects"
-        ? { kind: "objects", ids: [...state.selection.ids] }
-        : state.selection.kind === "decorations"
-          ? { kind: "decorations", ids: [...state.selection.ids] }
-          : { kind: "tiles", indices: [...state.selection.indices] };
-
-    const token = ++this.playToken;
-    this.store.setMode("play");
-    this.viewport?.setVisible(false);
-    try {
-      await audio.load();
-      const files = this.fileAccess;
-      const session = createPlaytest(state.document, {
-        host: this.host,
-        audio,
-        getBindings: () => settings.snapshot().input.bindings,
-        isPauseOnBlur: () => settings.snapshot().gameplay.pauseOnBlur,
-        replayFiles: {
-          save: async (contents, suggestedName) => {
-            const ok = await files.save(suggestedName, contents);
-            return ok ? suggestedName : null;
-          },
-          open: async () => {
-            const file = await files.open();
-            return file ? { path: file.name, contents: file.json } : null;
-          },
-        },
-        clipboard: {
-          writeText: (text) => navigator.clipboard.writeText(text),
-        },
-        rendererAssets: studioAssetCatalog,
-        rendererManifest: studioRendererManifest,
-        onSnapshot: (snapshot) => {
-          if (token !== this.playToken) return;
-          this.setPlaytestSnapshot(snapshot);
-        },
-        onError: (message) => {
-          if (token !== this.playToken) return;
-          this.toast(`Play error: ${message}`);
-          this.stopPlay();
-        },
-        onExitToObject: (sourceEntityId) => {
-          if (token !== this.playToken) return;
-          this.stopPlay();
-          this.focusObject(sourceEntityId);
-        },
-      });
-      await session.start();
-      if (token !== this.playToken || this.store.get().mode !== "play") {
-        session.dispose();
-        return;
-      }
-      this.play = session;
-    } catch (error) {
-      this.toast(`Could not start Play: ${error instanceof Error ? error.message : String(error)}`);
-      this.stopPlay();
-    }
-  }
-
-  private stopPlay(): void {
-    this.playToken++;
-    this.play?.dispose();
-    this.play = null;
-    this.setPlaytestSnapshot(STOPPED_PLAYTEST);
-    this.store.setMode("edit");
-    this.viewport?.setVisible(true);
-    if (this.savedView) this.store.setView(this.savedView.zoom, this.savedView.viewportPosition);
-    this.store.setSelection(this.savedSelection);
-    this.viewport?.redraw();
-  }
-
-  /** Lazily create Web Audio only when the user first enters Play mode. */
-  private getAudio(): GameplaySounds {
-    this.audio ??= new GameplaySounds(
-      new SoundEffects({
-        resolver: {
-          resolveUrl(soundId) {
-            const asset = studioProject.assets.find((entry) => entry.id === soundId);
-            if (!asset) throw new Error(`Unknown starter sound '${soundId}'.`);
-            return resolveStudioAssetUrl(asset);
-          },
-        },
-        soundIds: studioSoundAssetIds,
-        bindings: studioSoundBindings,
-      }),
-    );
-    return this.audio;
-  }
+  togglePlay(): void { this.playtest.togglePlay(); }
 
   // ---------- Playtest debugger commands ----------
 
-  playtestTogglePause(): void {
-    this.play?.togglePause();
-  }
-  playtestStep(): void {
-    this.play?.step();
-  }
-  playtestSetCheckpoint(): void {
-    this.play?.setCheckpoint();
-  }
-  playtestRestartCheckpoint(): void {
-    this.play?.restartCheckpoint();
-  }
-  playtestRestartLevel(): void {
-    this.play?.restartLevel();
-  }
-  playtestSeek(frame: number): void {
-    this.play?.seek(frame);
-  }
-  playtestNudgeTimeScale(delta: number): void {
-    this.play?.nudgeTimeScale(delta);
-  }
-  playtestSetInvulnerable(enabled: boolean): void {
-    this.play?.setInvulnerable(enabled);
-  }
-  playtestSaveReplay(): void {
-    this.play?.saveReplay();
-  }
-  playtestLoadReplay(): void {
-    this.play?.loadReplay();
-  }
-  playtestCopyDiagnostics(): void {
-    void this.play?.copyDiagnostics();
-  }
-  playtestSelect(runtimeId: string | null): void {
-    this.play?.select(runtimeId);
-  }
-  playtestFocusSource(): void {
-    this.play?.focusSelectedSource();
-  }
+  playtestTogglePause(): void { this.playtest.togglePause(); }
+  playtestStep(): void { this.playtest.step(); }
+  playtestSetCheckpoint(): void { this.playtest.setCheckpoint(); }
+  playtestRestartCheckpoint(): void { this.playtest.restartCheckpoint(); }
+  playtestRestartLevel(): void { this.playtest.restartLevel(); }
+  playtestSeek(frame: number): void { this.playtest.seek(frame); }
+  playtestNudgeTimeScale(delta: number): void { this.playtest.nudgeTimeScale(delta); }
+  playtestSetInvulnerable(enabled: boolean): void { this.playtest.setInvulnerable(enabled); }
+  playtestSaveReplay(): void { this.playtest.saveReplay(); }
+  playtestLoadReplay(): void { this.playtest.loadReplay(); }
+  playtestCopyDiagnostics(): void { this.playtest.copyDiagnostics(); }
+  playtestSelect(runtimeId: string | null): void { this.playtest.select(runtimeId); }
+  playtestFocusSource(): void { this.playtest.focusSelectedSource(); }
 
   // ---------- Keyboard ----------
 
   handleKeydown(e: KeyboardEvent): void {
-    const mod = e.ctrlKey || e.metaKey;
     const state = this.store.get();
-
-    if (state.mode === "play") {
-      if (e.code === "Escape" || (mod && e.code === "Enter")) {
-        e.preventDefault();
-        this.togglePlay();
-        return;
-      }
-      if (e.code === "F8") {
-        e.preventDefault();
-        if (mod) this.playtestSetCheckpoint();
-        else if (e.shiftKey) this.playtestRestartCheckpoint();
-        else this.playtestTogglePause();
-        return;
-      }
-      if (e.code === "F10") {
-        e.preventDefault();
-        this.playtestStep();
-        return;
-      }
-      if (e.code === "F9") {
-        e.preventDefault();
-        useUiStore.getState().togglePlaytestInspector();
-        return;
-      }
-      if (e.code === "BracketLeft") {
-        e.preventDefault();
-        this.playtestNudgeTimeScale(-1);
-        return;
-      }
-      if (e.code === "BracketRight") {
-        e.preventDefault();
-        this.playtestNudgeTimeScale(1);
-        return;
-      }
-      if (e.code === "KeyI" && mod) {
-        e.preventDefault();
-        const next = !this.playtestSnapshot.debug.invulnerable;
-        this.playtestSetInvulnerable(next);
-        return;
-      }
-      if (e.code === "KeyY" && mod) {
-        e.preventDefault();
-        this.playtestCopyDiagnostics();
-        return;
-      }
-      if (e.code === "KeyU" && mod) {
-        e.preventDefault();
-        this.playtestSaveReplay();
-        return;
-      }
-      if (e.code === "KeyO" && mod) {
-        e.preventDefault();
-        this.playtestLoadReplay();
-        return;
-      }
-      return;
-    }
-
-    if (e.code === "Escape" && useUiStore.getState().fullscreen) {
-      e.preventDefault();
-      void window.studio?.window.toggleFullscreen();
-      return;
-    }
-
-    if (e.code === "Escape" && useUiStore.getState().contextMenu) {
-      e.preventDefault();
-      this.closeEmptyContextMenu();
-      return;
-    }
-
+    const uiState = useUiStore.getState();
     const target = e.target as HTMLElement | null;
-    const typing = target && ["INPUT", "SELECT", "TEXTAREA"].includes(target.tagName);
+    const isTypingField = !!(target && ["INPUT", "SELECT", "TEXTAREA"].includes(target.tagName));
 
-    if (mod && e.code === "KeyZ") {
-      e.preventDefault();
-      if (e.shiftKey) this.redo();
-      else this.undo();
-      return;
-    }
-    if (mod && e.code === "KeyY") {
-      e.preventDefault();
-      this.redo();
-      return;
-    }
-    if (mod && e.code === "KeyS") {
-      e.preventDefault();
-      this.save();
-      return;
-    }
-    if (mod && e.code === "KeyN") {
-      e.preventDefault();
-      this.newLevel();
-      return;
-    }
-    if (mod && e.code === "KeyO") {
-      e.preventDefault();
-      void this.openLevel();
-      return;
-    }
-    if (mod && (e.code === "Equal" || e.code === "NumpadAdd")) {
-      e.preventDefault();
-      this.zoomIn();
-      return;
-    }
-    if (mod && (e.code === "Minus" || e.code === "NumpadSubtract")) {
-      e.preventDefault();
-      this.zoomOut();
-      return;
-    }
-    if (mod && e.code === "Digit0") {
-      e.preventDefault();
-      this.setZoom(1);
-      return;
-    }
-    if (mod && e.code === "KeyD") {
-      e.preventDefault();
-      this.duplicateSelection();
-      return;
-    }
-    if (mod && e.code === "Enter") {
-      e.preventDefault();
-      this.togglePlay();
-      return;
-    }
+    const ctx: KeyboardContext = {
+      mode: state.mode,
+      activeTool: state.activeTool,
+      isTypingField,
+      isFullscreen: uiState.fullscreen,
+      hasContextMenu: !!uiState.contextMenu,
+      invulnerable: this.playtest.getSnapshot().debug.invulnerable,
+    };
 
-    if (typing) return;
+    const cmd = dispatchEditorKey(e, ctx, state.document.gridSize);
+    if (!cmd) return;
+    e.preventDefault();
 
-    switch (e.code) {
-      case "Delete":
-      case "Backspace":
-        e.preventDefault();
-        this.deleteSelection();
-        break;
-      case "Escape":
+    switch (cmd.kind) {
+      case "undo": this.undo(); break;
+      case "redo": this.redo(); break;
+      case "save": this.save(); break;
+      case "newLevel": this.newLevel(); break;
+      case "openLevel": void this.openLevel(); break;
+      case "zoomIn": this.zoomIn(); break;
+      case "zoomOut": this.zoomOut(); break;
+      case "zoomReset": this.setZoom(1); break;
+      case "duplicate": this.duplicateSelection(); break;
+      case "delete": this.deleteSelection(); break;
+      case "fit": this.fit(); break;
+      case "toggleGrid": this.toggleGrid(); break;
+      case "toggleSnap": this.toggleSnap(); break;
+      case "toolSelect": this.store.setTool("select"); break;
+      case "toolTile": this.toggleTileTool(); break;
+      case "escapeTool":
         if (
           state.activeTool === "place" ||
           state.activeTool === "placeDecoration" ||
@@ -754,37 +472,21 @@ export class EditorController {
           this.store.setTool("select");
         else this.store.clearSelection();
         break;
-      case "KeyG":
-        if (e.shiftKey) this.store.toggleSnap();
-        else this.store.toggleGrid();
-        break;
-      case "KeyF":
-        this.fit();
-        break;
-      case "KeyV":
-        this.store.setTool("select");
-        break;
-      case "KeyT":
-        this.toggleTileTool();
-        break;
-      case "ArrowLeft":
-        e.preventDefault();
-        nudgeSelection(this.store, e.shiftKey ? -state.document.gridSize : -1, 0);
-        break;
-      case "ArrowRight":
-        e.preventDefault();
-        nudgeSelection(this.store, e.shiftKey ? state.document.gridSize : 1, 0);
-        break;
-      case "ArrowUp":
-        e.preventDefault();
-        nudgeSelection(this.store, 0, e.shiftKey ? -state.document.gridSize : -1);
-        break;
-      case "ArrowDown":
-        e.preventDefault();
-        nudgeSelection(this.store, 0, e.shiftKey ? state.document.gridSize : 1);
-        break;
-      default:
-        break;
+      case "closeContextMenu": this.closeEmptyContextMenu(); break;
+      case "exitFullscreen": void window.studio?.window.toggleFullscreen(); break;
+      case "nudge": nudgeSelection(this.store, cmd.dx, cmd.dy); break;
+      case "togglePlay": this.togglePlay(); break;
+      case "playtestExit": this.playtest.stopPlay(); break;
+      case "playtestTogglePause": this.playtestTogglePause(); break;
+      case "playtestSetCheckpoint": this.playtestSetCheckpoint(); break;
+      case "playtestRestartCheckpoint": this.playtestRestartCheckpoint(); break;
+      case "playtestStep": this.playtestStep(); break;
+      case "playtestToggleInspector": uiState.togglePlaytestInspector(); break;
+      case "playtestNudgeTimeScale": this.playtestNudgeTimeScale(cmd.delta); break;
+      case "playtestSetInvulnerable": this.playtestSetInvulnerable(cmd.enabled); break;
+      case "playtestCopyDiagnostics": this.playtestCopyDiagnostics(); break;
+      case "playtestSaveReplay": this.playtestSaveReplay(); break;
+      case "playtestLoadReplay": this.playtestLoadReplay(); break;
     }
   }
 
