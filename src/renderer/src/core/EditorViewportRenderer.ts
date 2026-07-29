@@ -331,7 +331,8 @@ export class EditorViewportRenderer {
     }
 
     if (state.hover?.kind === "decoration" && !selectedDecIds.includes(state.hover.id)) {
-      const dec = state.document.decorations.find((d) => d.id === state.hover!.id);
+      const hoverId = state.hover.id;
+      const dec = state.document.decorations.find((d) => d.id === hoverId);
       const b = dec ? decorationBounds(dec) : null;
       if (b) g.rect(b.x, b.y, b.w, b.h).stroke({ width: 1 / zoom, color: COLOR_HOVER, alpha: 0.5 });
     }
