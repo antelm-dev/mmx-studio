@@ -1,11 +1,21 @@
 // Usage: node scripts/zero-import/index.mjs <cache-dir> <out-dir>
 // Turns the zero-x-mashup cache (game/cache) into a Studio project directory.
 // The output holds Capcom-derived assets: it gets its own catch-all .gitignore.
-import { cpSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { crc32, deflateSync, inflateSync } from "node:zlib";
 
-import { cameraZones, cellSize, introHighwayArt, placeInCell, tileOf, toClip } from "./convert.mjs";
+import {
+  arcEntries,
+  cameraZones,
+  cellSize,
+  introHighwayArt,
+  msAdpcmToPcmWav,
+  placeInCell,
+  SOUND_ROLES,
+  tileOf,
+  toClip,
+} from "./convert.mjs";
 
 const [cacheArg, outArg] = process.argv.slice(2);
 if (!cacheArg || !outArg) {
@@ -14,8 +24,9 @@ if (!cacheArg || !outArg) {
 }
 const cache = resolve(cacheArg);
 const out = resolve(outArg);
-// zero_moves.json lives next to the cache: <game>/sheets/zero_moves.json
+// zero_moves.json and sounds.json live next to the cache: <game>/sheets/
 const movesPath = join(cache, "..", "sheets", "zero_moves.json");
+const soundsPath = join(cache, "..", "sheets", "sounds.json");
 
 const readJson = (path) => JSON.parse(readFileSync(path, "utf8"));
 const write = (rel, data) => {
@@ -180,14 +191,51 @@ const artAssets = ["stage", "background"].map((name) => {
   return { id: `image.${name}`, kind: "image", path };
 });
 
-// --- Borrowed from templates/mmx-demo: the HUD, shot/effect animations, gameplay sounds and
-// UI font the browser build requires. Same ids as the template so its bindings copy verbatim.
-// ponytail: stopgap until P5 brings MMZ sounds and Zero's own HUD/effects; drop then.
+// --- MMZ1 sounds from the user's MZZXLC install (sounds.json picks entries of Zero1SE.arc and
+// the stage music). Without the install the template's sounds stay, so the project still builds.
+function findMzzxlc() {
+  if (process.env.MZZXLC_DIR) return process.env.MZZXLC_DIR;
+  // ponytail: default Steam locations only, like zero-x-mashup engine/src/steam.rs
+  const roots = ["C:/Program Files (x86)/Steam", "C:/Program Files/Steam"];
+  const libs = roots.flatMap((root) => {
+    const vdf = join(root, "steamapps", "libraryfolders.vdf");
+    if (!existsSync(vdf)) return [];
+    return [...readFileSync(vdf, "utf8").matchAll(/"path"\s+"([^"]+)"/g)].map((m) => m[1].replaceAll("\\\\", "\\"));
+  });
+  return [...libs, ...roots].map((lib) => join(lib, "steamapps", "common", "MZZXLC")).find(existsSync);
+}
+const zeroSounds = { bindings: {}, assets: [] };
+const mzzxlc = findMzzxlc();
+if (!mzzxlc) {
+  console.warn("MZZXLC not found in your Steam libraries (or MZZXLC_DIR): keeping the template sounds.");
+} else {
+  const sheet = readJson(soundsPath);
+  const native = join(mzzxlc, "nativePCx64");
+  const bank = arcEntries(readFileSync(join(native, "RZZC", "romPC", "Zero1SE.arc"))).filter((e) => e.name.includes("\\wav\\"));
+  for (const [role, id] of Object.entries(SOUND_ROLES)) {
+    const entry = sheet.sfx[role];
+    if (entry === undefined) continue;
+    if (!bank[entry]) throw new Error(`sounds.json ${role}: Zero1SE.arc has no wav entry ${entry}`);
+    const path = `assets/sounds/zero/${id}.wav`;
+    write(path, msAdpcmToPcmWav(bank[entry].data));
+    zeroSounds.bindings[id] = `sfx.zero.${id}`;
+    zeroSounds.assets.push({ id: `sfx.zero.${id}`, kind: "sound", path });
+  }
+  // .sngw is plain Ogg Vorbis. The engine has no music binding yet: the track is only declared.
+  const music = "assets/music/stage.ogg";
+  write(music, readFileSync(join(native, "sound", "bgm", "wav", sheet.music.file)));
+  zeroSounds.assets.push({ id: "music.stage", kind: "sound", path: music });
+}
+
+// --- Borrowed from templates/mmx-demo: the HUD, shot/effect animations, the gameplay sounds
+// MMZ1 does not map and the UI font the browser build requires. Same ids as the template so
+// its bindings copy verbatim.
+// ponytail: stopgap until Zero has his own HUD/effects; drop then.
 const template = join(import.meta.dirname, "..", "..", "templates", "mmx-demo");
 const tplBindings = readJson(join(template, "game", "data.json")).bindings;
 const borrowed = {
   fontUi: tplBindings.fontUi,
-  sounds: tplBindings.sounds,
+  sounds: Object.fromEntries(Object.entries(tplBindings.sounds).filter(([id]) => !zeroSounds.bindings[id])),
   shotAnimations: tplBindings.shotAnimations,
   hudSprites: tplBindings.hudSprites,
 };
@@ -219,6 +267,7 @@ write("project.json", {
     },
     { id: "sprite.player.zero", kind: "sprite", path: "assets/sprites/player/zero.png" },
     ...artAssets,
+    ...zeroSounds.assets,
     ...borrowedAssets,
   ],
 });
@@ -227,6 +276,7 @@ write("game/data.json", {
   bindings: {
     playerAnimation: "anim.player.zero",
     ...borrowed,
+    sounds: { ...borrowed.sounds, ...zeroSounds.bindings },
     enemyAnimations: {},
     pickupAnimations: {},
   },
@@ -235,5 +285,6 @@ write(".gitignore", "# Capcom-derived assets generated by mmx-studio scripts/zer
 
 console.log(
   `${out}: ${Object.keys(animations).length} clips, ${n} frames in ${cell.w}x${cell.h} cells, ` +
-    `${stage.w}x${stage.h} tiles, ${Object.keys(slopes).length} slope tiles`,
+    `${stage.w}x${stage.h} tiles, ${Object.keys(slopes).length} slope tiles, ` +
+    `${Object.keys(zeroSounds.bindings).length} MMZ1 sounds`,
 );
