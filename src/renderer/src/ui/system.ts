@@ -10,6 +10,11 @@ const studioConfig = defineConfig({
   // Chakra alter Dockview, Monaco, Pixi canvas, or Electron drag-region elements.
   preflight: false,
   theme: {
+    tokens: {
+      fonts: {
+        mono: { value: '"JetBrains Mono", "Cascadia Code", ui-monospace, "Consolas", monospace' },
+      },
+    },
     semanticTokens: {
       colors: {
         studio: {

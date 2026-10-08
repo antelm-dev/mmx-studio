@@ -1,4 +1,5 @@
 import { useEffect, useMemo, type ReactElement } from "react";
+import { chakra } from "@chakra-ui/react";
 import {
   createColumnHelper,
   flexRender,
@@ -10,18 +11,19 @@ import type { ValidationIssue } from "@mmx/content-schema";
 import type { ProjectIssue } from "@mmx/project-io";
 import type { DockviewPanelApi } from "dockview-react";
 import { editor, useEditorSnapshot, useProjectSession } from "../app/useEditor.js";
-import { cx } from "../ui.js";
-import { Panel, PanelScroll } from "../ui/editor/panel.js";
+import { Panel, PanelNote, PanelScroll } from "../ui/editor/panel.js";
 
-const dot = "inline-block w-2 h-2 rounded-full flex-none";
+const Dot = chakra("span", {
+  base: { display: "inline-block", w: "2", h: "2", rounded: "full", flex: "none" },
+});
 
-/** Extra per-column classes for the Problems table cells. */
-const cellCls = (id: string): string =>
+/** Extra per-column styles for the Problems table cells. */
+const cellStyle = (id: string) =>
   id === "msg"
-    ? "w-full"
+    ? { w: "full" }
     : id === "code"
-      ? "text-muted font-mono text-[10px] whitespace-nowrap"
-      : "";
+      ? { color: "studio.muted", fontFamily: "mono", fontSize: "10px", whiteSpace: "nowrap" }
+      : {};
 
 type ProblemRow = {
   severity: "error" | "warning";
@@ -36,9 +38,7 @@ const problemColumns: ColumnDef<ProblemRow, string>[] = [
   column.display({
     id: "dot",
     cell: (ctx) => (
-      <span
-        className={cx(dot, ctx.row.original.severity === "error" ? "bg-danger" : "bg-warning")}
-      />
+      <Dot bg={ctx.row.original.severity === "error" ? "studio.danger" : "studio.warning"} />
     ),
   }) as ColumnDef<ProblemRow, string>,
   column.accessor("message", { id: "msg", cell: (c) => c.getValue() }),
@@ -100,30 +100,34 @@ export function ProblemsPanel({ api }: { api?: DockviewPanelApi }): ReactElement
     <Panel>
       <PanelScroll>
         {issues.length === 0 ? (
-          <div className="px-3 py-3.5 text-xs text-[#7f91aa]">
-            <span className={cx(dot, "bg-success mr-[7px]")} /> No problems detected. Ready to play.
-          </div>
+          <PanelNote color="#7f91aa">
+            <Dot bg="studio.success" mr="7px" /> No problems detected. Ready to play.
+          </PanelNote>
         ) : (
-          <table className="w-full border-collapse text-xs">
+          <chakra.table w="full" borderCollapse="collapse" textStyle="xs">
             <tbody>
               {table.getRowModel().rows.map((row) => (
-                <tr
+                <chakra.tr
                   key={row.id}
-                  className="cursor-pointer hover:bg-popover-hover"
+                  cursor="pointer"
+                  _hover={{ bg: "studio.popoverHover" }}
                   onClick={() => row.original.objectId && editor.focusObject(row.original.objectId)}
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <td
+                    <chakra.td
                       key={cell.id}
-                      className={cx("py-[5px] px-3 align-baseline", cellCls(cell.column.id))}
+                      py="5px"
+                      px="3"
+                      verticalAlign="baseline"
+                      {...cellStyle(cell.column.id)}
                     >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </td>
+                    </chakra.td>
                   ))}
-                </tr>
+                </chakra.tr>
               ))}
             </tbody>
-          </table>
+          </chakra.table>
         )}
       </PanelScroll>
     </Panel>

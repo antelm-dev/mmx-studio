@@ -1,5 +1,6 @@
 import { useMemo, useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
+import { chakra } from "@chakra-ui/react";
 import { Search, X } from "lucide-react";
 import {
   CATEGORY_LABELS,
@@ -10,13 +11,9 @@ import {
 import { editor, useEditorSnapshot } from "../app/useEditor.js";
 import { useUiStore } from "../store/uiStore.js";
 import { ListRow, ListRowAdd } from "../ui/editor/list-row.js";
-import { Panel, PanelScroll } from "../ui/editor/panel.js";
+import { Panel, PanelNote, PanelScroll, SearchBox } from "../ui/editor/panel.js";
+import { CategoryHeader } from "../ui/editor/section-title.js";
 import { SpritePreview } from "./SpritePreview.js";
-
-const cat =
-  "flex items-end text-[9.5px] uppercase tracking-[0.7px] text-fg-2 pt-[14px] px-3.5 pb-[5px] font-extrabold";
-const emptyNote = "px-3 py-3.5 text-muted text-xs";
-const itemName = "min-w-0 flex-1 whitespace-nowrap overflow-hidden text-ellipsis";
 
 type PaletteRow =
   | { kind: "header"; key: string; label: string }
@@ -30,25 +27,20 @@ export function PalettePanel() {
 
   return (
     <Panel>
-      <div className="flex items-center gap-2 h-9 mt-3 mx-3 mb-2 px-2.5 border border-border-strong rounded-lg bg-raised shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] transition-[border-color,box-shadow] duration-[120ms] focus-within:border-accent focus-within:shadow-[0_0_0_3px_rgba(59,130,246,0.12)]">
-        <Search size={16} className="text-fg-3" />
+      <SearchBox>
+        <Search size={16} />
         <input
-          className="min-w-0 flex-1 border-0 outline-0 bg-transparent text-fg text-xs placeholder:text-fg-3"
           placeholder="Search objects…"
           aria-label="Search objects"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
         {query && (
-          <button
-            className="border-0 bg-transparent text-fg-3 cursor-pointer inline-flex"
-            aria-label="Clear search"
-            onClick={() => setQuery("")}
-          >
+          <button aria-label="Clear search" onClick={() => setQuery("")}>
             <X size={15} />
           </button>
         )}
-      </div>
+      </SearchBox>
       <PaletteList query={query} snap={snap} />
     </Panel>
   );
@@ -97,14 +89,14 @@ function PaletteList({
   if (rows.length === 0) {
     return (
       <PanelScroll ref={scrollRef}>
-        <div className={emptyNote}>No objects match your search.</div>
+        <PanelNote>No objects match your search.</PanelNote>
       </PanelScroll>
     );
   }
 
   return (
     <PanelScroll ref={scrollRef}>
-      <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
+      <chakra.div position="relative" w="full" style={{ height: virtualizer.getTotalSize() }}>
         {virtualizer.getVirtualItems().map((v) => {
           const row = rows[v.index];
           const style = {
@@ -117,9 +109,9 @@ function PaletteList({
           };
           if (row.kind === "header") {
             return (
-              <div key={v.key} className={cat} style={style}>
+              <CategoryHeader key={v.key} style={style}>
                 {row.label}
-              </div>
+              </CategoryHeader>
             );
           }
           const def = row.def;
@@ -131,13 +123,15 @@ function PaletteList({
                 onClick={() => editor.selectPalette(def.id)}
               >
                 <SpritePreview definitionId={def.id} size={28} fallbackColor={def.editor.color} />
-                <span className={itemName}>{def.name}</span>
+                <chakra.span minW="0" flex="1" truncate>
+                  {def.name}
+                </chakra.span>
                 <ListRowAdd />
               </ListRow>
             </div>
           );
         })}
-      </div>
+      </chakra.div>
     </PanelScroll>
   );
 }

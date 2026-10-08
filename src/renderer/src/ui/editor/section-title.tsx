@@ -16,3 +16,19 @@ export const SectionTitle = chakra("div", {
     divider: { true: { borderTop: "1px solid", borderColor: "studio.border", mt: "2" } },
   },
 });
+
+/** Extra-bold category heading inside a virtualized list (palette, scene). */
+export const CategoryHeader = chakra("div", {
+  base: {
+    display: "flex",
+    alignItems: "flex-end",
+    fontSize: "9.5px",
+    textTransform: "uppercase",
+    letterSpacing: "0.7px",
+    color: "studio.fgSecondary",
+    pt: "14px",
+    px: "3.5",
+    pb: "5px",
+    fontWeight: "extrabold",
+  },
+});

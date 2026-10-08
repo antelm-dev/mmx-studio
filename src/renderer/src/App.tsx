@@ -1,4 +1,5 @@
 import { useCallback, useEffect, type ReactElement } from "react";
+import { chakra } from "@chakra-ui/react";
 import { DockviewReact, type DockviewReadyEvent, type IDockviewPanelProps } from "dockview-react";
 import { editor } from "./app/useEditor.js";
 import { buildDefaultLayout, setDockApi } from "./app/dock.js";
@@ -15,7 +16,7 @@ import { SelectionPanel } from "./components/SelectionPanel.js";
 import { JsonPanel } from "./components/JsonPanel.js";
 import { Toasts } from "./components/Toasts.js";
 import { useUiStore } from "./store/uiStore.js";
-import { cx } from "./ui.js";
+
 import {
   ensureStudioClientSettings,
   getStudioClientSettingsStore,
@@ -86,22 +87,22 @@ export function App() {
 
   return (
     <>
-      <div
-        className={cx(
-          "grid h-screen w-screen",
-          fullscreen ? "grid-rows-[36px_minmax(0,1fr)]" : "grid-rows-[32px_36px_minmax(0,1fr)]",
-        )}
+      <chakra.div
+        display="grid"
+        h="100vh"
+        w="100vw"
+        gridTemplateRows={fullscreen ? "36px minmax(0,1fr)" : "32px 36px minmax(0,1fr)"}
       >
         {!fullscreen && <TitleBar />}
         <Toolbar />
-        <main className="min-h-0 min-w-0 overflow-hidden bg-bg">
+        <chakra.main minH="0" minW="0" overflow="hidden" bg="studio.bg">
           <DockviewReact
             className="dockview-theme-studio studio-workspace"
             components={dockComponents}
             onReady={onReady}
           />
-        </main>
-      </div>
+        </chakra.main>
+      </chakra.div>
       <Toasts />
     </>
   );

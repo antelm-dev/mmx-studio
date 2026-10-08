@@ -1,3 +1,4 @@
+import { Box, chakra } from "@chakra-ui/react";
 import { AlertTriangle, ArrowDown, ArrowUp, ImagePlus, Trash2, X } from "lucide-react";
 import {
   DECORATION_LAYERS,
@@ -17,6 +18,11 @@ import { Panel, PanelScroll } from "../ui/editor/panel.js";
 import { Field, FieldInput, FieldSelect } from "../ui/editor/field.js";
 import { SectionTitle } from "../ui/editor/section-title.js";
 import { ToolbarButton } from "../ui/editor/toolbar-button.js";
+
+const Row = chakra("div", { base: { py: "3px", px: "3.5" } });
+const Grid2 = chakra("div", {
+  base: { display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "2" },
+});
 
 /** Right dock tab: configure the level ("room") — name, grid pitch, size and art layers. */
 export function RoomPanel() {
@@ -58,7 +64,7 @@ export function RoomPanel() {
     <Panel>
       <PanelScroll>
         <SectionTitle>Room</SectionTitle>
-        <div className="py-[3px] px-3.5">
+        <Row>
           <Field label="Name">
             <FieldInput
               type="text"
@@ -67,10 +73,10 @@ export function RoomPanel() {
               onBlur={(e) => commit({ name: e.target.value.trim() || doc.name })}
             />
           </Field>
-        </div>
+        </Row>
 
         <SectionTitle divider>Size</SectionTitle>
-        <div className="grid grid-cols-2 gap-2 py-[3px] px-3.5">
+        <Grid2 py="3px" px="3.5">
           <Field label="Columns">
             <FieldInput
               type="number"
@@ -89,8 +95,8 @@ export function RoomPanel() {
               onBlur={(e) => commitInt("rows", e.target.value)}
             />
           </Field>
-        </div>
-        <div className="py-[3px] px-3.5">
+        </Grid2>
+        <Row>
           <Field label="Grid size (px)">
             <FieldInput
               type="number"
@@ -100,41 +106,81 @@ export function RoomPanel() {
               onBlur={(e) => commitInt("gridSize", e.target.value)}
             />
           </Field>
-        </div>
+        </Row>
 
-        <div className="mx-3.5 mt-2 mb-1 flex justify-between gap-2.5 rounded-lg border border-border bg-raised px-3 py-2 text-xs">
-          <span className="text-muted">World size</span>
-          <span className="font-mono text-[#e6ebf5]">
+        <chakra.div
+          mx="3.5"
+          mt="2"
+          mb="1"
+          display="flex"
+          justifyContent="space-between"
+          gap="2.5"
+          rounded="lg"
+          border="1px solid"
+          borderColor="studio.border"
+          bg="studio.raised"
+          px="3"
+          py="2"
+          textStyle="xs"
+        >
+          <chakra.span color="studio.muted">World size</chakra.span>
+          <chakra.span fontFamily="mono" color="#e6ebf5">
             {worldW} × {worldH} px
-          </span>
-        </div>
+          </chakra.span>
+        </chakra.div>
 
-        <div className="flex items-start gap-2 px-3.5 py-2 text-[10.5px] leading-[1.5] text-fg-3">
-          <AlertTriangle size={13} className="mt-px flex-none text-warning" />
+        <chakra.div
+          display="flex"
+          alignItems="flex-start"
+          gap="2"
+          px="3.5"
+          py="2"
+          fontSize="10.5px"
+          lineHeight="1.5"
+          color="studio.fgTertiary"
+        >
+          <Box asChild mt="1px" flex="none" color="studio.warning">
+            <AlertTriangle size={13} />
+          </Box>
           <span>Shrinking the room crops terrain and slopes outside the new bounds.</span>
-        </div>
+        </chakra.div>
 
         <SectionTitle divider>Image layers</SectionTitle>
-        <div className="flex flex-col gap-2 px-3.5 py-[3px]" data-testid="image-layers">
+        <chakra.div
+          display="flex"
+          flexDirection="column"
+          gap="2"
+          px="3.5"
+          py="3px"
+          data-testid="image-layers"
+        >
           {(doc.imageLayers ?? []).map((layer, index, all) => (
             <ImageLayerRow key={layer.id} layer={layer} first={index === 0} last={index === all.length - 1} />
           ))}
           <ToolbarButton onClick={() => void editor.importImageLayer()}>
             <ImagePlus size={14} /> Add image layer…
           </ToolbarButton>
-        </div>
+        </chakra.div>
 
         <SectionTitle divider>Backdrop</SectionTitle>
-        <div className="flex items-center gap-2 px-3.5 py-[3px]">
-          <input
+        <chakra.div display="flex" alignItems="center" gap="2" px="3.5" py="3px">
+          <chakra.input
             type="color"
             aria-label="Backdrop colour"
-            className="h-8 w-12 cursor-pointer rounded border border-border-strong bg-raised"
+            h="8"
+            w="12"
+            cursor="pointer"
+            rounded="sm"
+            border="1px solid"
+            borderColor="studio.borderStrong"
+            bg="studio.raised"
             defaultValue={doc.backdrop ?? "#000000"}
             key={`backdrop-${doc.backdrop ?? ""}`}
             onBlur={(e) => setBackdrop(editor.store, e.target.value)}
           />
-          <span className="font-mono text-xs text-fg-2">{doc.backdrop ?? "none"}</span>
+          <chakra.span fontFamily="mono" textStyle="xs" color="studio.fgSecondary">
+            {doc.backdrop ?? "none"}
+          </chakra.span>
           {doc.backdrop && (
             <ToolbarButton
               icon
@@ -144,7 +190,7 @@ export function RoomPanel() {
               <X size={14} />
             </ToolbarButton>
           )}
-        </div>
+        </chakra.div>
       </PanelScroll>
     </Panel>
   );
@@ -158,11 +204,26 @@ function ImageLayerRow({ layer, first, last }: { layer: ImageLayer; first: boole
     updateImageLayer(editor.store, layer.id, { [key]: value });
   };
   return (
-    <div className="rounded-lg border border-border bg-raised p-2" data-image-layer={layer.id}>
-      <div className="mb-1.5 flex items-center gap-1">
-        <span className="min-w-0 flex-1 truncate font-mono text-[11px] text-fg" title={layer.assetId}>
+    <chakra.div
+      rounded="lg"
+      border="1px solid"
+      borderColor="studio.border"
+      bg="studio.raised"
+      p="2"
+      data-image-layer={layer.id}
+    >
+      <chakra.div mb="1.5" display="flex" alignItems="center" gap="1">
+        <chakra.span
+          minW="0"
+          flex="1"
+          truncate
+          fontFamily="mono"
+          fontSize="11px"
+          color="studio.fg"
+          title={layer.assetId}
+        >
           {layer.assetId}
-        </span>
+        </chakra.span>
         <ToolbarButton
           icon
           aria-label="Move layer back"
@@ -186,8 +247,8 @@ function ImageLayerRow({ layer, first, last }: { layer: ImageLayer; first: boole
         >
           <Trash2 size={14} />
         </ToolbarButton>
-      </div>
-      <div className="grid grid-cols-2 gap-2">
+      </chakra.div>
+      <Grid2>
         <Field label="Layer">
           <FieldSelect
             value={layer.layer}
@@ -214,7 +275,7 @@ function ImageLayerRow({ layer, first, last }: { layer: ImageLayer; first: boole
             />
           </Field>
         ))}
-      </div>
-    </div>
+      </Grid2>
+    </chakra.div>
   );
 }

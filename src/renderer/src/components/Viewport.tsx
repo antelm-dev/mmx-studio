@@ -1,4 +1,5 @@
 import { type CSSProperties, useEffect, useMemo, useRef } from "react";
+import { chakra } from "@chakra-ui/react";
 import { Grid3x3, Magnet, MousePointer2, Paintbrush } from "lucide-react";
 import {
   CATEGORY_LABELS,
@@ -60,13 +61,31 @@ export function Viewport() {
   );
 
   return (
-    <div className="relative h-full min-h-0 bg-[radial-gradient(circle_at_50%_35%,#111a29_0%,#06090f_55%,#04060a_100%)]">
-      <div ref={hostRef} className="absolute inset-0 overflow-hidden">
+    <chakra.div
+      position="relative"
+      h="full"
+      minH="0"
+      bgImage="radial-gradient(circle at 50% 35%,#111a29 0%,#06090f 55%,#04060a 100%)"
+    >
+      <chakra.div ref={hostRef} position="absolute" inset="0" overflow="hidden">
         {mode === "edit" && (
           <>
-            <div className="absolute z-[3] pointer-events-none left-3.5 top-3.5 flex items-center gap-2">
+            <chakra.div
+              position="absolute"
+              zIndex="3"
+              pointerEvents="none"
+              left="3.5"
+              top="3.5"
+              display="flex"
+              alignItems="center"
+              gap="2"
+            >
               <OverlayCard
-                className="inline-flex items-center gap-2 h-8 px-2.5"
+                display="inline-flex"
+                alignItems="center"
+                gap="2"
+                h="8"
+                px="2.5"
                 bg="rgba(12,17,26,0.9)"
                 rounded="lg"
                 boxShadow="0 5px 18px rgba(0,0,0,0.28)"
@@ -82,7 +101,11 @@ export function Viewport() {
                 {snap.state.activeTool === "tile" ? "Tile paint" : "Select / move"}
               </OverlayCard>
               <OverlayCard
-                className="inline-flex items-center gap-2 h-8 px-2.5"
+                display="inline-flex"
+                alignItems="center"
+                gap="2"
+                h="8"
+                px="2.5"
                 bg="rgba(12,17,26,0.8)"
                 borderColor="rgba(64,77,100,0.6)"
                 rounded="lg"
@@ -92,13 +115,21 @@ export function Viewport() {
                 color="#b4c1d4"
               >
                 <span>{Math.round(snap.state.zoom * 100)}%</span>
-                <span className="w-px h-3 bg-[#3a4960]" />
+                <chakra.span w="1px" h="3" bg="#3a4960" />
                 <Grid3x3 size={12} color={snap.state.gridVisible ? "#4b8eff" : "#7c8da7"} />
                 <Magnet size={12} color={snap.state.snapEnabled ? "#4b8eff" : "#7c8da7"} />
               </OverlayCard>
-            </div>
+            </chakra.div>
             <OverlayCard
-              className="absolute z-[3] pointer-events-none left-1/2 -translate-x-1/2 bottom-3.5 px-3 py-2 whitespace-nowrap"
+              position="absolute"
+              zIndex="3"
+              pointerEvents="none"
+              left="50%"
+              transform="translateX(-50%)"
+              bottom="3.5"
+              px="3"
+              py="2"
+              whiteSpace="nowrap"
               bg="rgba(12,17,26,0.9)"
               rounded="10px"
               boxShadow="0 5px 18px rgba(0,0,0,0.28)"
@@ -120,7 +151,7 @@ export function Viewport() {
           </>
         )}
         {mode === "play" && <PlaytestDebugger />}
-      </div>
+      </chakra.div>
 
       <MenuRoot
         lazyMount
@@ -189,7 +220,7 @@ export function Viewport() {
           )}
         </MenuContent>
       </MenuRoot>
-    </div>
+    </chakra.div>
   );
 }
 
@@ -204,5 +235,15 @@ function Swatch({ style }: { style: CSSProperties }) {
 }
 
 function HintDot() {
-  return <span className="inline-block w-0.5 h-0.5 mx-2 rounded-full bg-[#7c8da7] align-middle" />;
+  return (
+    <chakra.span
+      display="inline-block"
+      w="0.5"
+      h="0.5"
+      mx="2"
+      rounded="full"
+      bg="#7c8da7"
+      verticalAlign="middle"
+    />
+  );
 }

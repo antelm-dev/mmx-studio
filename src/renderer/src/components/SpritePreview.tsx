@@ -1,10 +1,13 @@
 import { useMemo } from "react";
+import { chakra } from "@chakra-ui/react";
 import { getDefinition } from "@mmx/content-schema";
 import {
   getDecorationPreview,
   getSpritePreview,
 } from "@mmx/renderer-pixi";
 import { starterAssets } from "../assets/studioAssets.js";
+
+const ring = "0 0 0 1px {colors.studio.border}";
 
 interface Props {
   definitionId?: string;
@@ -32,31 +35,46 @@ export function SpritePreview({
     const [rx, ry, rw, rh] = preview.region;
     const scale = Math.min(size / rw, size / rh);
     return (
-      <span
-        className="grid place-items-center flex-none overflow-hidden rounded-md bg-raised ring-1 ring-border"
+      <chakra.span
+        display="grid"
+        placeItems="center"
+        flex="none"
+        overflow="hidden"
+        rounded="md"
+        bg="studio.raised"
+        boxShadow={ring}
         style={{ width: size, height: size, transform: flip ? "scaleX(-1)" : undefined }}
         title={assetId ?? definitionId}
       >
-        <span
-          className="relative overflow-hidden flex-none [image-rendering:pixelated]"
+        <chakra.span
+          position="relative"
+          overflow="hidden"
+          flex="none"
+          imageRendering="pixelated"
           style={{ width: rw, height: rh, transform: `scale(${scale})` }}
         >
-          <img
-            className="absolute max-w-none [image-rendering:pixelated] pointer-events-none"
+          <chakra.img
+            position="absolute"
+            maxW="none"
+            imageRendering="pixelated"
+            pointerEvents="none"
             src={preview.imageUrl}
             style={{ left: -rx, top: -ry }}
             alt=""
             draggable={false}
           />
-        </span>
-      </span>
+        </chakra.span>
+      </chakra.span>
     );
   }
 
   if (fallbackColor) {
     return (
-      <span
-        className="block flex-none rounded-md ring-1 ring-border"
+      <chakra.span
+        display="block"
+        flex="none"
+        rounded="md"
+        boxShadow={ring}
         style={{ width: size, height: size, background: fallbackColor }}
       />
     );

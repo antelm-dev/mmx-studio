@@ -1,20 +1,28 @@
 import { useMemo, useRef, useState } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
+import { chakra } from "@chakra-ui/react";
 import { Eye, EyeOff, Lock, Search, Unlock, X } from "lucide-react";
 import { DECORATION_LAYERS, type DecorationLayer } from "@mmx/content-schema";
 import { DECORATION_ASSETS, type DecorationAsset } from "@mmx/renderer-pixi";
 import { editor, useEditorSnapshot } from "../app/useEditor.js";
 import { ListRow, ListRowAdd } from "../ui/editor/list-row.js";
-import { Panel, PanelScroll } from "../ui/editor/panel.js";
-import { SectionTitle } from "../ui/editor/section-title.js";
+import { Panel, PanelNote, PanelScroll, SearchBox } from "../ui/editor/panel.js";
+import { CategoryHeader, SectionTitle } from "../ui/editor/section-title.js";
 import { SpritePreview } from "./SpritePreview.js";
 
-const cat =
-  "flex items-end text-[9.5px] uppercase tracking-[0.7px] text-fg-2 pt-[14px] px-3.5 pb-[5px] font-extrabold";
-const itemName = "min-w-0 flex-1 whitespace-nowrap overflow-hidden text-ellipsis";
-
-const layerBtn =
-  "inline-flex items-center justify-center w-6 h-6 rounded-md text-fg-3 hover:text-fg hover:bg-hover cursor-pointer";
+const LayerButton = chakra("button", {
+  base: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    w: "6",
+    h: "6",
+    rounded: "md",
+    color: "studio.fgTertiary",
+    cursor: "pointer",
+    _hover: { color: "studio.fg", bg: "studio.hover" },
+  },
+});
 
 type PaletteRow =
   | { kind: "header"; key: string; label: string }
@@ -35,25 +43,20 @@ export function AssetsPanel() {
 
   return (
     <Panel>
-      <div className="flex items-center gap-2 h-9 mt-3 mx-3 mb-2 px-2.5 border border-border-strong rounded-lg bg-raised shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] transition-[border-color,box-shadow] duration-[120ms] focus-within:border-accent focus-within:shadow-[0_0_0_3px_rgba(59,130,246,0.12)]">
-        <Search size={16} className="text-fg-3" />
+      <SearchBox>
+        <Search size={16} />
         <input
-          className="min-w-0 flex-1 border-0 outline-0 bg-transparent text-fg text-xs placeholder:text-fg-3"
           placeholder="Search decorations…"
           aria-label="Search decorations"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
         {query && (
-          <button
-            className="border-0 bg-transparent text-fg-3 cursor-pointer inline-flex"
-            aria-label="Clear search"
-            onClick={() => setQuery("")}
-          >
+          <button aria-label="Clear search" onClick={() => setQuery("")}>
             <X size={15} />
           </button>
         )}
-      </div>
+      </SearchBox>
       <DecorationList query={query} snap={snap} />
       <LayerToggles snap={snap} />
     </Panel>
@@ -99,14 +102,14 @@ function DecorationList({
   if (rows.length === 0) {
     return (
       <PanelScroll ref={scrollRef}>
-        <div className="px-3 py-3.5 text-muted text-xs">No decorations match your search.</div>
+        <PanelNote>No decorations match your search.</PanelNote>
       </PanelScroll>
     );
   }
 
   return (
     <PanelScroll ref={scrollRef}>
-      <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
+      <chakra.div position="relative" w="full" style={{ height: virtualizer.getTotalSize() }}>
         {virtualizer.getVirtualItems().map((v) => {
           const row = rows[v.index];
           const style = {
@@ -119,9 +122,9 @@ function DecorationList({
           };
           if (row.kind === "header") {
             return (
-              <div key={v.key} className={cat} style={style}>
+              <CategoryHeader key={v.key} style={style}>
                 {row.label}
-              </div>
+              </CategoryHeader>
             );
           }
           const { asset } = row;
@@ -133,13 +136,15 @@ function DecorationList({
                 onClick={() => editor.selectDecorationPalette(asset.id)}
               >
                 <SpritePreview assetId={asset.id} size={28} />
-                <span className={itemName}>{asset.name}</span>
+                <chakra.span minW="0" flex="1" truncate>
+                  {asset.name}
+                </chakra.span>
                 <ListRowAdd />
               </ListRow>
             </div>
           );
         })}
-      </div>
+      </chakra.div>
     </PanelScroll>
   );
 }
@@ -149,29 +154,38 @@ function LayerToggles({ snap }: { snap: ReturnType<typeof useEditorSnapshot> }) 
   const locks = snap.state.decorationLayerLocked;
 
   return (
-    <div className="flex-none border-t border-border">
+    <chakra.div flex="none" borderTop="1px solid" borderColor="studio.border">
       <SectionTitle pt="2" pb="1">
         Layers
       </SectionTitle>
       {DECORATION_LAYERS.map((layer: DecorationLayer) => (
-        <div key={layer} className="flex items-center gap-1.5 px-3 py-0.5 text-xs text-fg-2">
-          <button
-            className={layerBtn}
+        <chakra.div
+          key={layer}
+          display="flex"
+          alignItems="center"
+          gap="1.5"
+          px="3"
+          py="0.5"
+          textStyle="xs"
+          color="studio.fgSecondary"
+        >
+          <LayerButton
             title={vis[layer] ? `Hide ${layer}` : `Show ${layer}`}
             onClick={() => editor.store.setDecorationLayerVisible(layer, !vis[layer])}
           >
             {vis[layer] ? <Eye size={14} /> : <EyeOff size={14} />}
-          </button>
-          <button
-            className={layerBtn}
+          </LayerButton>
+          <LayerButton
             title={locks[layer] ? `Unlock ${layer}` : `Lock ${layer}`}
             onClick={() => editor.store.setDecorationLayerLocked(layer, !locks[layer])}
           >
             {locks[layer] ? <Lock size={14} /> : <Unlock size={14} />}
-          </button>
-          <span className="flex-1 min-w-0 truncate">{layer}</span>
-        </div>
+          </LayerButton>
+          <chakra.span flex="1" minW="0" truncate>
+            {layer}
+          </chakra.span>
+        </chakra.div>
       ))}
-    </div>
+    </chakra.div>
   );
 }
