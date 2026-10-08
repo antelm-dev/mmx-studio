@@ -9,13 +9,16 @@ node scripts/zero-import/index.mjs <cache-dir> <out-dir>
 node scripts/zero-import/index.mjs ../zero-x-mashup/game/cache ../zero-x-mashup/project
 # then, from the mmx-core-ts checkout:
 pnpm sim -- --project ../zero-x-mashup/project
+pnpm factory:build -- --project ../zero-x-mashup/project
+pnpm factory:dev -- --project ../zero-x-mashup/project
 ```
 
 The output is Capcom-derived. Keep it outside the repo; the script also writes a
 catch-all `.gitignore` into it, and the repo ignores `zero-project/`. Nothing here adds
 a dependency: PNG read/write uses `node:zlib`.
 
-`zero_moves.json` is read from `<cache-dir>/../sheets/`.
+`zero_moves.json` is read from `<cache-dir>/../sheets/`; borrowed assets (see
+[Borrowed from the template](#borrowed-from-the-template)) from `templates/mmx-demo/`.
 
 ## Input: the cache
 
@@ -33,11 +36,13 @@ back to step `<frame>`; `0xff` ends it and holds the last step.
 ## Output: the Studio project
 
 ```text
-project.json                         manifest: anim.player.zero + sprite.player.zero
-game/data.json                       bindings: playerAnimation only
+project.json                         manifest: anim.player.zero + sprite.player.zero + borrowed assets
+game/data.json                       bindings: playerAnimation + borrowed fontUi/sounds/shotAnimations/hudSprites
 levels/level.intro-highway.json      schemaVersion 2 level document
 assets/sprites/player/zero.png       repacked sheet
 assets/sprites/player/zero_anims.json  { animations } (same clips as in project.json)
+assets/{sprites/hud,sprites/effects,sounds,fonts}/...  copied from templates/mmx-demo
+ATTRIBUTION.md                       copied from templates/mmx-demo
 ```
 
 ### Sprites
@@ -101,8 +106,24 @@ colour, enemies.
 
 ### Bindings
 
-`game/data.json` binds `playerAnimation` only, with no `playerPointingSheet` since
-Zero has no detached arm. The project-schema validator, Studio's loader and the
-headless sim accept that. The browser build (`pnpm factory:build`/`factory:dev`) does
-not yet: it requires non-empty `shotAnimations`, `hudSprites` (xBar, hpFill,
-weaponBar), every gameplay sound and a pointing sheet.
+`game/data.json` binds `playerAnimation` to Zero, with no `playerPointingSheet` since
+Zero has no detached arm (the renderer then draws the arm layer from the normal sheet).
+`enemyAnimations` and `pickupAnimations` stay empty: the level has no enemies or
+pickups and the build accepts empty maps.
+
+### Borrowed from the template
+
+The browser build (`pnpm factory:build`/`factory:dev`, mmx-core-ts
+`build-tools/src/studioBindings.ts`) requires a non-empty `shotAnimations`,
+`hudSprites` with `xBar`, `hpFill` and `weaponBar`, and a sound for every
+`GAMEPLAY_SOUND_IDS` entry; the HUD and menus also use `fontUi`. The cache has none of
+these, so the script copies them from `templates/mmx-demo`:
+
+- the template's `fontUi`, `sounds`, `shotAnimations` and `hudSprites` bindings,
+  verbatim;
+- every asset those bindings name, plus the `sheetAssetId` sprite of each effect
+  animation, as manifest entries with the template's ids and paths, and their files;
+- `ATTRIBUTION.md`.
+
+So Zero currently plays with X's sounds, buster shots/effects and HP bar. This is a
+stopgap until P5 brings MMZ sounds (and Zero's own HUD/effects); drop the borrowing then.

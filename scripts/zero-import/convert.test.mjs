@@ -1,5 +1,7 @@
-import { existsSync } from "node:fs";
-import { resolve } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { join, resolve } from "node:path";
+
+import { GAMEPLAY_SOUND_IDS } from "@mmx/browser-audio";
 import { describe, expect, it } from "vitest";
 
 import { loadProject } from "../../src/project-io/index.ts";
@@ -59,5 +61,22 @@ describe.skipIf(!existsSync(generated))("generated zero project", () => {
   it("loads through Studio's project-io", async () => {
     const result = await loadProject(createNodeFileSystem(generated));
     expect(result.ok ? [] : result.issues).toEqual([]);
+  });
+
+  // Mirrors what mmx-core-ts build-tools/src/studioBindings.ts requires of the browser build.
+  it("binds everything the browser build requires to manifest assets", () => {
+    const read = (rel) => JSON.parse(readFileSync(join(generated, rel), "utf8"));
+    const { bindings } = read("game/data.json");
+    const ids = new Set(read("project.json").assets.map((a) => a.id));
+    const required = [
+      bindings.fontUi,
+      ...Object.values(bindings.shotAnimations),
+      bindings.hudSprites.xBar,
+      bindings.hudSprites.hpFill,
+      bindings.hudSprites.weaponBar,
+      ...GAMEPLAY_SOUND_IDS.map((name) => bindings.sounds[name]),
+    ];
+    expect(Object.keys(bindings.shotAnimations).length).toBeGreaterThan(0);
+    expect(required.filter((id) => !ids.has(id))).toEqual([]);
   });
 });
