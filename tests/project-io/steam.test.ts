@@ -6,6 +6,8 @@ import { test } from "node:test";
 
 import { findSteamGame, parseLibraryFolders, steamLibraries } from "../../src/project-io/node.js";
 
+import { oracle } from "./oracle.js";
+
 const vdf = (paths: string[]) => `"libraryfolders"
 {
 ${paths
@@ -71,4 +73,12 @@ test("findSteamGame reports a missing install clearly", async () => {
   } finally {
     await rm(tmp, { recursive: true, force: true });
   }
+});
+
+test("oracle: both collections are installed and located", async (t) => {
+  const mmx = await oracle(t, "mmxlc");
+  const mmz = mmx && (await oracle(t, "mzzxlc"));
+  if (!mmx || !mmz) return;
+  assert.match(mmx.install, /Mega Man X Legacy Collection$/);
+  assert.match(mmz.install, /MZZXLC$/);
 });

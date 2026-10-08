@@ -141,3 +141,25 @@ GBA frames face left (MODLOG gotcha 3).
 **Oracle.** `tests/project-io/mmz1.test.ts`: `zero.json` is byte-identical to
 the Python cache and `zero.png` has identical pixels. The cache has no object
 25, so the objects are only checked against the clip contract.
+
+## Oracle tests
+
+The readers are checked against zero-x-mashup's Python cache (`game/cache`),
+which `python game/build_cache.py` builds from the same Steam installs. They
+compare the stage, background and Zero atlas pixels, and `stage.json` and
+`zero.json` byte for byte: collision, checkpoints and cameras, anchors and
+scripts. This is the TS counterpart of the Rust `cargo test --release`.
+
+```bash
+# needs the two Steam installs (or MMXLC_DIR / MZZXLC_DIR) and a built cache
+ZERO_X_MASHUP_ROOT=../zero-x-mashup pnpm test:oracle
+```
+
+`pnpm test:oracle` runs only the `oracle:` tests of `tests/project-io/steam`,
+`mmx1` and `mmz1`. They also run in `pnpm test`.
+
+`ZERO_X_MASHUP_ROOT` defaults to `../zero-x-mashup`, relative to the repo
+root. Without an install or the cache (CI, other machines), each oracle test
+is skipped. It prints `[oracle] SKIPPED "<test>": <reason>`, naming the
+missing install or cache files and the `ZERO_X_MASHUP_ROOT` value, and reports
+as `# SKIP` with the same reason. The shared gate is `tests/project-io/oracle.ts`.

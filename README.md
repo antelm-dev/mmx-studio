@@ -76,7 +76,8 @@ pnpm gen:ipc         # (re)generate the typed preload bridge from the *.ipc.ts m
 pnpm build           # gen:ipc, then build renderer (Vite) + main/preload (Rollup)
 pnpm start           # run the built app (electron .)
 pnpm typecheck       # tsc --noEmit (renderer + node configs)
-pnpm test            # Vitest
+pnpm test            # Vitest + node:test libs (Zero × MMX oracle tests skip, with the reason, without the local data)
+pnpm test:oracle     # only the Zero × MMX reader oracles vs zero-x-mashup/game/cache (see docs/zero-import.md)
 pnpm e2e             # Playwright Electron smoke tests (build first)
 pnpm run pack:dir    # electron-builder: unpacked app in dist/ (fast smoke test)
 pnpm dist            # electron-builder: platform installer(s) in dist/
