@@ -1,5 +1,4 @@
 import { useCallback, useEffect, type ReactElement } from "react";
-import * as RadixTooltip from "@radix-ui/react-tooltip";
 import { DockviewReact, type DockviewReadyEvent, type IDockviewPanelProps } from "dockview-react";
 import { editor } from "./app/useEditor.js";
 import { buildDefaultLayout, setDockApi } from "./app/dock.js";
@@ -86,7 +85,7 @@ export function App() {
   }, []);
 
   return (
-    <RadixTooltip.Provider delayDuration={350} skipDelayDuration={200}>
+    <>
       <div
         className={cx(
           "grid h-screen w-screen",
@@ -104,6 +103,6 @@ export function App() {
         </main>
       </div>
       <Toasts />
-    </RadixTooltip.Provider>
+    </>
   );
 }

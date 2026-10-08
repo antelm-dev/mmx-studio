@@ -63,6 +63,70 @@ test("boots into the editor shell with the toolbar and default level", async () 
   await expect(page.locator("#viewport-canvas")).toBeVisible();
 });
 
+test("toolbar tooltip, level menu, and toggles work above Dockview", async () => {
+  pageErrors.length = 0;
+  consoleErrors.length = 0;
+
+  const grid = page.getByRole("button", { name: "Grid", exact: true });
+  await grid.hover();
+  const tooltip = page.getByRole("tooltip");
+  await expect(tooltip).toHaveText("Toggle grid (G)");
+  // Portalled content must be the topmost element at its own center (not clipped by Dockview).
+  // Tooltip layers are pointer-events:none, which elementFromPoint skips, so lift it for the probe.
+  await expect
+    .poll(() =>
+      tooltip.evaluate((el) => {
+        const positioner = el.parentElement!;
+        positioner.style.pointerEvents = "auto";
+        const r = el.getBoundingClientRect();
+        const hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+        positioner.style.pointerEvents = "";
+        return positioner.contains(hit) && positioner.parentElement === document.body;
+      }),
+    )
+    .toBe(true);
+
+  const pressed = await grid.getAttribute("aria-pressed");
+  expect(pressed === "true" || pressed === "false").toBe(true);
+  const toggled = pressed === "true" ? "false" : "true";
+  await grid.click();
+  await expect(grid).toHaveAttribute("aria-pressed", toggled);
+  await grid.click();
+  await expect(grid).toHaveAttribute("aria-pressed", pressed!);
+  await page.mouse.move(0, 0);
+  await expect(tooltip).toBeHidden();
+
+  const levelMenu = page.getByRole("button", { name: "Level menu" });
+  const newLevel = page.getByRole("menuitem", { name: "New Level" });
+  const openLevel = page.getByRole("menuitem", { name: /Open Level/ });
+  await levelMenu.focus();
+  await page.keyboard.press("Enter");
+  await expect(newLevel).toBeVisible();
+  await expect(openLevel).toBeVisible();
+  await expect(levelMenu).toHaveAttribute("aria-expanded", "true");
+  await page.keyboard.press("ArrowDown");
+  await expect(page.locator("[role=menuitem][data-highlighted]")).toHaveCount(1);
+  // Arrow navigation refocuses the menu on the next frame; let it land before closing.
+  await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
+  await page.keyboard.press("Escape");
+  await expect(newLevel).toBeHidden();
+  await expect(levelMenu).toBeFocused();
+
+  await levelMenu.click();
+  await expect(newLevel).toBeVisible();
+  await levelMenu.click();
+  await expect(newLevel).toBeHidden();
+
+  // Selecting an item runs its editor command (fresh doc, so no discard confirm).
+  await levelMenu.click();
+  await newLevel.click();
+  await expect(newLevel).toBeHidden();
+  await expect(page.getByRole("status").filter({ hasText: "New level created." })).toBeVisible();
+
+  expect(pageErrors, `page errors: ${pageErrors.join("\n")}`).toEqual([]);
+  expect(consoleErrors, `console errors: ${consoleErrors.join("\n")}`).toEqual([]);
+});
+
 test("renders non-empty palette sprite previews", async () => {
   const previews = page.locator(
     '[title="spawn"] img, [title="enemy.metool"] img, [title="enemy.bat"] img',
