@@ -1,7 +1,5 @@
 // Pure conversions from the zero-x-mashup cache formats to Studio project formats.
 // See README.md in this folder for both formats and the mapping.
-import { inflateSync } from "node:zlib";
-
 import { VIEW_HEIGHT, VIEW_WIDTH } from "@mmx/engine";
 
 const LOOP = 0xfe;
@@ -135,89 +133,6 @@ export function cameraZones(cameras, worldW, worldH) {
     }
   }
   return zones;
-}
-
-/**
- * MT Framework ARC v7 (both Legacy Collections): "ARC\0", u16 version, u16 count, then
- * count x 80-byte entries { name[64], type hash, compressed size, size, offset }. Entry
- * data is zlib when it starts with 0x78, else stored. Same as zero-x-mashup engine/src/arc.rs.
- */
-export function arcEntries(buf) {
-  if (buf.toString("latin1", 0, 4) !== "ARC\0") throw new Error("not an MT Framework ARC file");
-  return Array.from({ length: buf.readUInt16LE(6) }, (_, i) => {
-    const e = 8 + i * 80;
-    const name = buf.toString("latin1", e, e + 64).replace(/\0.*$/s, "");
-    const off = buf.readUInt32LE(e + 76);
-    const blob = buf.subarray(off, off + buf.readUInt32LE(e + 68));
-    return { name, data: blob[0] === 0x78 ? inflateSync(blob) : blob };
-  });
-}
-
-const ADPCM_ADAPT = [230, 230, 230, 230, 307, 409, 512, 614, 768, 614, 512, 409, 307, 230, 230, 230];
-
-/**
- * RIFF WAV in Microsoft ADPCM (format 2) -> 16-bit PCM WAV. A port of zero-x-mashup
- * engine/src/audio.rs, which matches ffmpeg sample for sample. The predictor divides by
- * 256 rounding toward zero, as Microsoft's reference does; `>> 8` floors negatives and drifts.
- */
-export function msAdpcmToPcmWav(wav) {
-  if (wav.toString("latin1", 0, 4) !== "RIFF" || wav.toString("latin1", 8, 12) !== "WAVE") throw new Error("not a RIFF WAVE file");
-  const chunks = {};
-  for (let p = 12; p + 8 <= wav.length; ) {
-    const size = wav.readUInt32LE(p + 4);
-    chunks[wav.toString("latin1", p, p + 4)] = wav.subarray(p + 8, p + 8 + size);
-    p += 8 + size + (size & 1);
-  }
-  const fmt = chunks["fmt "];
-  const data = chunks.data;
-  if (!fmt || !data || fmt.readUInt16LE(0) !== 2) throw new Error("not an MS-ADPCM WAV");
-  const ch = fmt.readUInt16LE(2), rate = fmt.readUInt32LE(4), align = fmt.readUInt16LE(12);
-  const perBlock = fmt.readUInt16LE(18);
-  const coef = Array.from({ length: fmt.readUInt16LE(20) }, (_, i) => [fmt.readInt16LE(22 + i * 4), fmt.readInt16LE(24 + i * 4)]);
-  const pcm = [];
-  for (let b = 0; b + 7 * ch <= data.length; b += align) {
-    const block = data.subarray(b, b + align);
-    // header: predictor[ch], delta[ch], sample1[ch], sample2[ch]
-    const c1 = [], c2 = [], delta = [], s1 = [], s2 = [];
-    for (let c = 0; c < ch; c++) {
-      const pair = coef[block[c]];
-      if (!pair) throw new Error(`MS-ADPCM predictor ${block[c]} out of range`);
-      [c1[c], c2[c]] = pair;
-      delta[c] = block.readInt16LE(ch + c * 2);
-      s1[c] = block.readInt16LE(3 * ch + c * 2);
-      s2[c] = block.readInt16LE(5 * ch + c * 2);
-    }
-    const out = [...s2, ...s1];
-    let c = 0;
-    for (const byte of block.subarray(7 * ch)) {
-      for (const nib of [byte >> 4, byte & 15]) {
-        const pred = Math.trunc((s1[c] * c1[c] + s2[c] * c2[c]) / 256) + (nib >= 8 ? nib - 16 : nib) * delta[c];
-        const v = Math.min(Math.max(pred, -32768), 32767);
-        s2[c] = s1[c];
-        s1[c] = v;
-        delta[c] = Math.max((ADPCM_ADAPT[nib] * delta[c]) >> 8, 16);
-        out.push(v);
-        c = (c + 1) % ch;
-      }
-    }
-    pcm.push(...out.slice(0, perBlock * ch));
-  }
-  const head = Buffer.alloc(44);
-  head.write("RIFF", 0, "latin1");
-  head.writeUInt32LE(36 + pcm.length * 2, 4);
-  head.write("WAVEfmt ", 8, "latin1");
-  head.writeUInt32LE(16, 16);
-  head.writeUInt16LE(1, 20); // PCM
-  head.writeUInt16LE(ch, 22);
-  head.writeUInt32LE(rate, 24);
-  head.writeUInt32LE(rate * ch * 2, 28);
-  head.writeUInt16LE(ch * 2, 32);
-  head.writeUInt16LE(16, 34);
-  head.write("data", 36, "latin1");
-  head.writeUInt32LE(pcm.length * 2, 40);
-  const body = Buffer.alloc(pcm.length * 2);
-  pcm.forEach((s, i) => body.writeInt16LE(s, i * 2));
-  return Buffer.concat([head, body]);
 }
 
 /**

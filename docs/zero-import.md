@@ -142,6 +142,29 @@ GBA frames face left (MODLOG gotcha 3).
 the Python cache and `zero.png` has identical pixels. The cache has no object
 25, so the objects are only checked against the clip contract.
 
+## MMZ1 sound effects (`import/adpcm.ts`)
+
+`RZZC/romPC/Zero1SE.arc` (ARC v7, `readArc`) holds 470 `sound\se\wav\...`
+entries. Each is a RIFF WAV in Microsoft ADPCM (format 2, about 48 kHz
+stereo). `msAdpcmToPcmWav` decodes one into a 16-bit PCM WAV (`pcmWav`).
+
+Each block holds a header, then 4-bit samples:
+- header: `predictor[ch]` (u8, an index into the `fmt ` coefficient pairs),
+  then `delta[ch]`, `sample1[ch]` and `sample2[ch]` (i16 each);
+- samples: high nibble first, interleaved by channel, as signed values;
+- each sample is `trunc((s1 * c1 + s2 * c2) / 256) + nibble * delta`, clamped
+  to 16 bits;
+- then `delta = max(ADAPT[nibble] * delta >> 8, 16)`;
+- each block keeps `samples per block` frames.
+
+Gotcha: the division must round toward zero, as in Microsoft's reference.
+`>> 8` floors negative values and drifts.
+
+`tests/project-io/adpcm.test.ts` checks the decoder against ffmpeg. ffmpeg
+encodes a synthetic stereo chirp, and our output must equal ffmpeg's own
+decoding sample for sample. If ffmpeg is not on PATH, the test is skipped with
+a visible warning. The Rust original matched ffmpeg on all 470 game entries.
+
 ## Oracle tests
 
 The readers are checked against zero-x-mashup's Python cache (`game/cache`),
