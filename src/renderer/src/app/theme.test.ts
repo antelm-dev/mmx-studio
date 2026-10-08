@@ -50,6 +50,9 @@ describe("theme preference", () => {
     expect(root.style.colorScheme).toBe("light");
     expect(changes).toEqual(["light"]);
 
+    theme.applyThemePreference("system", (t) => changes.push(t));
+    expect(listeners.size).toBe(1);
+
     expect(theme.applyThemePreference("dark", (t) => changes.push(t))).toBe("dark");
     expect(listeners.size).toBe(0);
     setSystemDark(true);

@@ -27,6 +27,8 @@ function trackRequest(request: Request): void {
   }
 }
 
+let storedTheme: string | null = null;
+
 test.beforeAll(async () => {
   const env = { ...process.env };
   delete env.ELECTRON_RUN_AS_NODE;
@@ -51,9 +53,17 @@ test.beforeAll(async () => {
 
   await page.waitForLoadState("domcontentloaded");
   await expect(page.locator("#viewport-canvas")).toBeVisible({ timeout: 30_000 });
+  storedTheme = await page.evaluate(() => localStorage.getItem("mmx-studio-theme"));
 });
 
 test.afterAll(async () => {
+  // The suite runs on the real profile: put the developer's theme back even if a test failed midway.
+  await page
+    ?.evaluate((v) => {
+      if (v === null) localStorage.removeItem("mmx-studio-theme");
+      else localStorage.setItem("mmx-studio-theme", v);
+    }, storedTheme)
+    .catch(() => {});
   await app?.close();
 });
 
