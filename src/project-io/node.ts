@@ -83,3 +83,13 @@ export function createRootScopedFileSystem(root: string): FileSystem {
 export function joinRoot(root: string, relativePath: string): string {
   return join(resolve(root), assertPortable(relativePath));
 }
+
+export {
+  STEAM_GAMES,
+  DEFAULT_STEAM_ROOTS,
+  parseLibraryFolders,
+  steamLibraries,
+  findSteamGame,
+  type SteamGame,
+  type SteamGameResult,
+} from "./import/steam.js";
