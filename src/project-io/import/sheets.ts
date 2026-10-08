@@ -30,3 +30,17 @@ export const ZERO_SOUNDS = {
   music: "zero1_bgm/zero1_bgm005.sngw",
   sfx: { slash: 16, dash: 19, land: 13, buster_shot: 17, enemy_shot: 71, hurt: 21, wall_kick: 19 } as Record<string, number>,
 };
+
+/**
+ * Pantheon Hunter spawns on the Intro Highway, [x, y] in level px (enemies.json `spawns`, placed by eye in
+ * zero-x-mashup; not MMX1 data). They drop onto the road (y 384) when the level starts.
+ */
+export const PANTHEON_SPAWNS: [number, number][] = [
+  [520, 300],
+  [760, 300],
+  [1100, 300],
+  [1180, 300],
+  [1600, 300],
+  [2100, 300],
+  [2600, 300],
+];

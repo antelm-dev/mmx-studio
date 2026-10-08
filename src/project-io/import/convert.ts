@@ -3,6 +3,7 @@
 import { VIEW_HEIGHT, VIEW_WIDTH } from "@mmx/engine";
 
 import type { Step } from "./mmz1.js";
+import type { Rgba } from "./png.js";
 
 const LOOP = 0xfe;
 const HOLD = 0xff;
@@ -82,23 +83,46 @@ export function tileOf(byte: number): [number, [number, number]?] {
   return [Tile.Solid];
 }
 
-/** Smallest even cell that holds every frame with its (mirrored) anchor at the fixed spot. */
-export function cellSize(frames: Frame[]): { w: number; h: number } {
+/** Smallest even cell that holds every frame with its anchor `feetBelow` px under the cell centre (mirrored or not). */
+export function cellSize(frames: Frame[], feetBelow = FEET_BELOW_CENTRE): { w: number; h: number } {
   let half = 0, up = 0, down = 0;
   for (const [, , w, h, ax, ay] of frames) {
     half = Math.max(half, ax, w - ax);
     up = Math.max(up, ay);
     down = Math.max(down, h - ay);
   }
-  return { w: 2 * half, h: 2 * Math.max(up - FEET_BELOW_CENTRE, down + FEET_BELOW_CENTRE) };
+  return { w: 2 * half, h: 2 * Math.max(up - feetBelow, down + feetBelow) };
 }
 
 /**
- * Where a frame's top-left goes inside its cell. GBA frames face left and the engine
- * expects right-facing frames, so the frame is mirrored and its anchor with it.
+ * Where a frame's top-left goes inside its cell so its anchor lands at (cell.w / 2, cell.h / 2 + feetBelow).
+ * GBA frames face left: `mirror` flips the frame (and its anchor) for sheets the engine expects facing right.
  */
-export function placeInCell([, , w, , ax, ay]: Frame, cell: { w: number; h: number }): { dx: number; dy: number } {
-  return { dx: cell.w / 2 - (w - ax), dy: cell.h / 2 + FEET_BELOW_CENTRE - ay };
+export function placeInCell([, , w, , ax, ay]: Frame, cell: { w: number; h: number }, feetBelow = FEET_BELOW_CENTRE, mirror = true): { dx: number; dy: number } {
+  return { dx: cell.w / 2 - (mirror ? w - ax : ax), dy: cell.h / 2 + feetBelow - ay };
+}
+
+/** Every frame copied from the atlas into one fixed cell, 16 cells per row; regions in frame order. */
+export function packFrames(atlas: Rgba, frames: Frame[], feetBelow: number, mirror: boolean): { sheet: Rgba; regions: Region[]; cell: { w: number; h: number } } {
+  const cell = cellSize(frames, feetBelow);
+  const COLS = 16;
+  const width = COLS * cell.w;
+  const height = Math.ceil(frames.length / COLS) * cell.h;
+  const sheet = { width, height, px: new Uint8Array(width * height * 4) };
+  const regions = frames.map((frame, n) => {
+    const cx = (n % COLS) * cell.w;
+    const cy = Math.floor(n / COLS) * cell.h;
+    const [fx, fy, w, h] = frame;
+    const { dx, dy } = placeInCell(frame, cell, feetBelow, mirror);
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const s = ((fy + y) * atlas.width + fx + (mirror ? w - 1 - x : x)) * 4;
+        sheet.px.set(atlas.px.subarray(s, s + 4), ((cy + dy + y) * width + cx + dx + x) * 4);
+      }
+    }
+    return [cx, cy, cell.w, cell.h] as Region;
+  });
+  return { sheet, regions, cell };
 }
 
 /**

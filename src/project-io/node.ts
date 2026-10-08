@@ -141,6 +141,7 @@ export {
   tileOf,
   cellSize,
   placeInCell,
+  packFrames,
   introHighwayArt,
   cameraZones,
   Tile,
@@ -153,13 +154,14 @@ export {
   type Region,
   type CameraLimits,
 } from "./import/convert.js";
-export { ZERO_MOVES, ZERO_SOUNDS } from "./import/sheets.js";
+export { PANTHEON_SPAWNS, ZERO_MOVES, ZERO_SOUNDS } from "./import/sheets.js";
 export {
   ZERO_PROJECT_ID,
   readZeroSources,
   readZeroSourcesFromCache,
   writeZeroProject,
   zeroSheet,
+  pantheonSheets,
   introHighwayLevel,
   type ZeroSources,
   type Progress,
