@@ -35,12 +35,31 @@ function dedupe(issues: ValidationIssue[]): ValidationIssue[] {
   return out;
 }
 
+/**
+ * The engine's "bounds" advisory (an entity wholly outside the level) becomes an error:
+ * such an object never participates, so Play refuses to start until it is moved back in.
+ */
+function outOfBounds(engine: ValidationIssue[]): ValidationIssue[] {
+  return engine.map((issue) =>
+    issue.code === "bounds"
+      ? { ...issue, severity: "error", code: "object.out-of-bounds" }
+      : issue,
+  );
+}
+
 export function validateLevelDocument(
   doc: LevelDocument,
   options?: ValidateDocumentOptions,
 ): ValidationResult {
-  const authoring = validateDocument(doc, options);
-  const issues = dedupe([...authoring.issues, ...engineDiagnostics(doc)]);
+  const engine = outOfBounds(engineDiagnostics(doc));
+  const outside = new Set(
+    engine.filter((i) => i.code === "object.out-of-bounds").map((i) => i.objectId),
+  );
+  // The authoring "bounds" warning for the same object would only repeat the error.
+  const authoring = validateDocument(doc, options).issues.filter(
+    (i) => !(i.code === "bounds" && outside.has(i.objectId)),
+  );
+  const issues = dedupe([...authoring, ...engine]);
   const errorCount = issues.filter((i) => i.severity === "error").length;
   return {
     issues,
