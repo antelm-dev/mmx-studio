@@ -1,14 +1,12 @@
 import { createSystem, defaultConfig, defineConfig } from "@chakra-ui/react";
 
 /**
- * Chakra's semantic view of the existing Studio palette. The CSS variables stay
- * authoritative during the migration so Tailwind, Dockview, and Chakra always
- * observe the same synchronous `data-theme` change.
+ * Chakra's semantic view of the Studio palette. The `--studio-*` variables in
+ * styles.css stay authoritative so Dockview and Chakra observe the same
+ * synchronous `data-theme` change.
  */
 const studioConfig = defineConfig({
-  // The existing stylesheet owns the renderer reset. In particular, do not let
-  // Chakra alter Dockview, Monaco, Pixi canvas, or Electron drag-region elements.
-  preflight: false,
+  preflight: true,
   theme: {
     tokens: {
       fonts: {

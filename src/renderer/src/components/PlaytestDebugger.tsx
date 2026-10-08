@@ -191,6 +191,7 @@ function TimelineStrip({
         onChange={(e) => editor.playtestSeek(Number(e.target.value))}
         flex="1"
         h="1.5"
+        bg="transparent"
         cursor="pointer"
         _disabled={{ opacity: 0.4 }}
         style={{ accentColor: "#4b8eff" }}
