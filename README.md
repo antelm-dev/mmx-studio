@@ -132,6 +132,25 @@ abstraction (`core/persistence.ts`) so it still falls back to a browser
 download / hidden `<input>` when run outside Electron. A local recovery copy is
 written to `localStorage` on every change.
 
+## Zero × MMX import
+
+**File → Import from Steam installs…** builds a playable Studio project that
+puts MMZ1's Zero, with his moves, sounds and the stage music, on MMX1's Intro
+Highway, with Pantheon Hunters. It reads both games from the user's own Steam
+installs: Mega Man X Legacy Collection and Mega Man Zero/ZX Legacy Collection.
+
+**Legal route:**
+- The import reads the games the user owns, in place. Nothing is redistributed,
+  and no ROM or game file is extracted to disk.
+- The repository holds no Capcom asset: only code, design data, and tests on
+  synthetic data.
+- The imported project is Capcom-derived. It gets its own catch-all
+  `.gitignore`, and the repo ignores `zero-project/`. Keep it private: don't
+  commit, publish or share it.
+
+Formats, gotchas, oracle tests and open questions are in
+[docs/zero-import.md](docs/zero-import.md).
+
 ## Build notes
 
 - **Strict CSP.** The renderer runs under `script-src 'self'` (no `unsafe-eval`),
