@@ -128,3 +128,30 @@ export function MenuCheckboxItem({ children, ...props }: ComponentProps<typeof M
     </Menu.CheckboxItem>
   );
 }
+
+/** Single-choice set of `MenuRadioItem`s (`value` / `onValueChange`). */
+export const MenuRadioItemGroup = Menu.RadioItemGroup;
+
+/** Radio item with the same leading check slot as `MenuCheckboxItem`. */
+export function MenuRadioItem({ children, ...props }: ComponentProps<typeof Menu.RadioItem>) {
+  return (
+    <Menu.RadioItem
+      gap="9px"
+      px="3"
+      py="1.5"
+      rounded="0"
+      fontSize="12.5px"
+      color="studio.menuFg"
+      cursor="pointer"
+      _highlighted={{ bg: "studio.popoverHover", color: "studio.menuFgHover" }}
+      {...props}
+    >
+      <Box as="span" display="inline-flex" w="3.5" justifyContent="center" flex="none">
+        <Menu.ItemIndicator position="static" transform="none">
+          <Check size={13} />
+        </Menu.ItemIndicator>
+      </Box>
+      {children}
+    </Menu.RadioItem>
+  );
+}

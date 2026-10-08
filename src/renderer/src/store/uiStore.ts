@@ -1,5 +1,11 @@
 import { create } from "zustand";
-import { persistColorTheme, readStoredTheme, type ColorTheme } from "../app/theme.js";
+import {
+  applyThemePreference,
+  persistThemePreference,
+  readThemePreference,
+  type ColorTheme,
+  type ThemePreference,
+} from "../app/theme.js";
 import type { EmptyCellContextMenu } from "../core/EditorViewport.js";
 
 /**
@@ -20,6 +26,8 @@ interface UiState {
   /** Grouping toggle + per-category collapse state for the Scene tab. */
   sceneGrouped: boolean;
   collapsedSceneGroups: Record<string, boolean>;
+  themePreference: ThemePreference;
+  /** The applied theme: `themePreference`, with "system" resolved against the OS. */
   colorTheme: ColorTheme;
   fullscreen: boolean;
   playtestInspectorVisible: boolean;
@@ -30,7 +38,7 @@ interface UiState {
   setPaletteQuery: (query: string) => void;
   setSceneGrouped: (grouped: boolean) => void;
   toggleSceneGroup: (category: string) => void;
-  setColorTheme: (theme: ColorTheme) => void;
+  setThemePreference: (preference: ThemePreference) => void;
   toggleColorTheme: () => void;
   setFullscreen: (fullscreen: boolean) => void;
   togglePlaytestInspector: () => void;
@@ -38,13 +46,19 @@ interface UiState {
 
 let toastSeq = 0;
 
+const followThemePreference = (preference: ThemePreference): ColorTheme =>
+  applyThemePreference(preference, (colorTheme) => useUiStore.setState({ colorTheme }));
+
+const initialThemePreference = readThemePreference();
+
 export const useUiStore = create<UiState>((set, get) => ({
   toasts: [],
   contextMenu: null,
   paletteQuery: "",
   sceneGrouped: true,
   collapsedSceneGroups: {},
-  colorTheme: readStoredTheme(),
+  themePreference: initialThemePreference,
+  colorTheme: followThemePreference(initialThemePreference),
   fullscreen: false,
   playtestInspectorVisible: true,
 
@@ -66,15 +80,11 @@ export const useUiStore = create<UiState>((set, get) => ({
         [category]: !s.collapsedSceneGroups[category],
       },
     })),
-  setColorTheme: (colorTheme) => {
-    persistColorTheme(colorTheme);
-    set({ colorTheme });
+  setThemePreference: (themePreference) => {
+    persistThemePreference(themePreference);
+    set({ themePreference, colorTheme: followThemePreference(themePreference) });
   },
-  toggleColorTheme: () => {
-    const colorTheme = get().colorTheme === "dark" ? "light" : "dark";
-    persistColorTheme(colorTheme);
-    set({ colorTheme });
-  },
+  toggleColorTheme: () => get().setThemePreference(get().colorTheme === "dark" ? "light" : "dark"),
   setFullscreen: (fullscreen) => set({ fullscreen }),
   togglePlaytestInspector: () =>
     set((s) => ({ playtestInspectorVisible: !s.playtestInspectorVisible })),
