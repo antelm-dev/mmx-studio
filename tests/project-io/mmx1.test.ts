@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { test } from "node:test";
 
 import {
@@ -8,7 +8,6 @@ import {
   decodePng,
   encodePng,
   findMmx1Rom,
-  findSteamGame,
   gfxRle,
   readMmx1Install,
   snes2pc,
@@ -16,6 +15,8 @@ import {
   tile4bpp,
   vramDest,
 } from "../../src/project-io/node.js";
+
+import { oracle } from "./oracle.js";
 
 test("snes2pc maps LoROM/FastROM addresses", () => {
   assert.equal(snes2pc(0x008000), 0);
@@ -76,14 +77,11 @@ test("PNG encode/decode round-trips RGBA", () => {
   assert.deepEqual(decodePng(encodePng(img)), img);
 });
 
-// Oracle: zero-x-mashup's Python build_cache.py output, built from the same local install. Never committed.
-// Default: the zero-x-mashup checkout next to this repo (tests run from the repo root).
-const cache = join(resolve(process.env.ZERO_X_MASHUP_ROOT ?? "../zero-x-mashup"), "game", "cache");
-
-test("Intro Highway matches the Python cache", async (t) => {
-  const install = await findSteamGame("mmxlc");
-  if (!install.ok || !existsSync(join(cache, "stage.json"))) return t.skip("no MMXLC install or oracle cache");
-  const { stage, background, json } = await readMmx1Install(install.root);
+test("oracle: Intro Highway matches the Python cache", async (t) => {
+  const o = await oracle(t, "mmxlc", ["stage.json", "stage.png", "background.png"]);
+  if (!o) return;
+  const { cache } = o;
+  const { stage, background, json } = await readMmx1Install(o.install);
   assert.equal(JSON.stringify(json), readFileSync(join(cache, "stage.json"), "utf8"));
   for (const [name, img] of [["stage", stage], ["background", background]] as const) {
     const want = decodePng(readFileSync(join(cache, `${name}.png`)));

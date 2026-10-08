@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { test } from "node:test";
 import { deflateSync } from "node:zlib";
 
@@ -9,7 +9,6 @@ import {
   PANTHEON_SHOT_CLIP,
   decodePng,
   drawPieces,
-  findSteamGame,
   packAtlas,
   readArc,
   readFrames,
@@ -17,6 +16,8 @@ import {
   readScripts,
   type Character,
 } from "../../src/project-io/node.js";
+
+import { oracle } from "./oracle.js";
 
 function arc(files: [string, Buffer, boolean][]): Buffer {
   const head = Buffer.alloc(8 + files.length * 80);
@@ -94,15 +95,12 @@ test("packAtlas crops frames, wraps rows at 1024 px and keeps anchors", () => {
   assert.deepEqual(json["7"].scripts, big.scripts);
 });
 
-// Oracle: zero-x-mashup's Python build_cache.py output from the same local install. Never committed.
-const root = resolve(process.env.ZERO_X_MASHUP_ROOT ?? "../zero-x-mashup");
-
-test("Zero sprites match the Python cache; Pantheon and its shot resolve", async (t) => {
-  const install = await findSteamGame("mzzxlc");
-  const cache = join(root, "game", "cache");
-  if (!install.ok || !existsSync(join(cache, "zero.json"))) return t.skip("no MZZXLC install or oracle cache");
+test("oracle: Zero sprites match the Python cache; Pantheon and its shot resolve", async (t) => {
+  const o = await oracle(t, "mzzxlc", ["zero.json", "zero.png", "../sheets/zero_moves.json"]);
+  if (!o) return;
+  const { root, cache } = o;
   const anims = JSON.parse(readFileSync(join(root, "game", "sheets", "zero_moves.json"), "utf8")).moves.map((m: { anim: number }) => m.anim);
-  const { zero, objects } = await readMmz1Install(install.root, anims);
+  const { zero, objects } = await readMmz1Install(o.install, anims);
   assert.equal(JSON.stringify(zero.json), readFileSync(join(cache, "zero.json"), "utf8"));
   const want = decodePng(readFileSync(join(cache, "zero.png")));
   assert.equal(`${zero.atlas.width}x${zero.atlas.height}`, `${want.width}x${want.height}`);
