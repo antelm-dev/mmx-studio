@@ -12,19 +12,14 @@ import {
 } from "../core/EditorStore.js";
 import { type FileAccess } from "../core/persistence.js";
 import { ensureStudioClientSettings } from "../settings/studioClientSettings.js";
-import {
-  resolveStudioAssetUrl,
-  studioAssetCatalog,
-  studioProject,
-  studioRendererManifest,
-  studioSoundAssetIds,
-  studioSoundBindings,
-} from "../assets/studioAssets.js";
+import type { StudioAssets } from "../assets/studioAssets.js";
 import type { ValidationResult } from "@mmx/content-schema";
 
 export interface PlaytestCallbacks {
   getHost: () => HTMLElement | null;
   getFileAccess: () => FileAccess;
+  /** The open project's assets (starter fallback), or null when its bindings are invalid. */
+  getAssets: () => Promise<StudioAssets | null>;
   validate: () => ValidationResult;
   toast: (message: string) => void;
   /** Called when play exits and the source entity should receive focus. */
@@ -47,6 +42,7 @@ export interface PlaytestCallbacks {
 export class EditorPlaytestController {
   private play: EditorPlaytestSession | null = null;
   private audio: GameplaySounds | null = null;
+  private audioAssets: StudioAssets | null = null;
   /** Bumped on every startPlay so an async renderer creation can detect it was superseded. */
   private playToken = 0;
 
@@ -85,7 +81,12 @@ export class EditorPlaytestController {
   private async startPlay(): Promise<void> {
     const host = this.cb.getHost();
     if (!host) return;
-    const audio = this.getAudio();
+    const assets = await this.cb.getAssets();
+    if (!assets) {
+      this.cb.toast("Fix the project's asset bindings (see Problems) before playing.");
+      return;
+    }
+    const audio = this.getAudio(assets);
     audio.unlock();
 
     const settings = await ensureStudioClientSettings().catch((error: unknown) => {
@@ -139,8 +140,8 @@ export class EditorPlaytestController {
         clipboard: {
           writeText: (text) => navigator.clipboard.writeText(text),
         },
-        rendererAssets: studioAssetCatalog,
-        rendererManifest: studioRendererManifest,
+        rendererAssets: assets.catalog,
+        rendererManifest: assets.manifest,
         onSnapshot: (snapshot) => {
           if (token !== this.playToken) return;
           this.setSnapshot(snapshot);
@@ -162,6 +163,8 @@ export class EditorPlaytestController {
         return;
       }
       this.play = session;
+      // Lets e2e tests tell which project's player sheet Play loaded.
+      host.dataset.playerSheet = assets.manifest.playerSheet;
     } catch (error) {
       this.cb.toast(
         `Could not start Play: ${error instanceof Error ? error.message : String(error)}`,
@@ -186,18 +189,20 @@ export class EditorPlaytestController {
     }
   }
 
-  private getAudio(): GameplaySounds {
-    this.audio ??= new GameplaySounds(
+  private getAudio(assets: StudioAssets): GameplaySounds {
+    if (this.audio && this.audioAssets === assets) return this.audio;
+    this.audioAssets = assets;
+    this.audio = new GameplaySounds(
       new SoundEffects({
         resolver: {
           resolveUrl(soundId) {
-            const asset = studioProject.assets.find((entry) => entry.id === soundId);
-            if (!asset) throw new Error(`Unknown starter sound '${soundId}'.`);
-            return resolveStudioAssetUrl(asset);
+            const asset = assets.project.assets.find((entry) => entry.id === soundId);
+            if (!asset) throw new Error(`Unknown sound '${soundId}'.`);
+            return assets.resolveUrl(asset);
           },
         },
-        soundIds: studioSoundAssetIds,
-        bindings: studioSoundBindings,
+        soundIds: assets.soundIds,
+        bindings: assets.soundBindings,
       }),
     );
     return this.audio;

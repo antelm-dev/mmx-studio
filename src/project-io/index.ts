@@ -1,5 +1,6 @@
 export {
   PROJECT_MANIFEST,
+  GAME_DATA_FILE,
   LEVELS_DIR,
   ASSETS_DIR,
   PathTraversalError,

@@ -1,6 +1,12 @@
 import { validateProject, type ValidationIssue } from "@mmx/project-schema";
 import type { StudioProject, ProjectIssue } from "@mmx/project-io";
 import { updateLevelDocument } from "@mmx/project-io";
+import {
+  buildStudioAssets,
+  starterAssets,
+  type StudioAssets,
+  type StudioGameData,
+} from "../assets/studioAssets.js";
 
 export type ProjectSessionState = {
   open: boolean;
@@ -29,8 +35,11 @@ function validateOpenProject(project: StudioProject): ProjectIssue[] {
   return mapSchemaIssues(validateProject(project.manifest).issues);
 }
 
+const isPlayAssetIssue = (issue: ProjectIssue): boolean => issue.code.startsWith("play-assets.");
+
 export class ProjectSession {
   private state: ProjectSessionState = { ...EMPTY };
+  private assets: Promise<StudioAssets | null> = Promise.resolve(starterAssets);
   private readonly listeners = new Set<() => void>();
 
   subscribe = (fn: () => void): (() => void) => {
@@ -49,6 +58,59 @@ export class ProjectSession {
     this.emit();
   }
 
+  /** Replace the open project (or close it) and reload its assets. */
+  private switchProject(next: ProjectSessionState): void {
+    this.setState(next);
+    this.assets = this.loadAssets();
+  }
+
+  /**
+   * Sprites, animations and sounds for Play and the viewport: the open project's,
+   * the starter's when none is open, or null when the project's bindings are
+   * invalid (the reason is reported in the Problems panel).
+   */
+  getAssets(): Promise<StudioAssets | null> {
+    return this.assets;
+  }
+
+  private async loadAssets(): Promise<StudioAssets | null> {
+    const { rootPath, project } = this.state;
+    const bridge = window.studio?.project;
+    if (!bridge || !rootPath || !project) return starterAssets;
+
+    const issues: ProjectIssue[] = [];
+    let assets: StudioAssets | null = null;
+    try {
+      const result = await bridge.readPlayAssets(rootPath, project.manifest.assets);
+      issues.push(...result.issues);
+      if (!result.ok) throw new Error("Project assets could not be read.");
+      const { gameData, urls } = result.value;
+      assets = buildStudioAssets(
+        project.manifest,
+        gameData as StudioGameData,
+        (asset) => urls[asset.id] ?? "",
+      );
+      // ponytail: renderer-pixi caches sheets by asset id with no reset, so a sheet whose id
+      // is already loaded with different bytes fails here until restart; reset once exposed.
+      await assets.catalog.load();
+    } catch (error) {
+      assets = null;
+      issues.push({
+        severity: "warning",
+        code: "play-assets.bindings",
+        path: "/game/data.json",
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
+    if (this.state.rootPath === rootPath) {
+      this.setState({
+        ...this.state,
+        issues: [...this.state.issues.filter((entry) => !isPlayAssetIssue(entry)), ...issues],
+      });
+    }
+    return assets;
+  }
+
   getEntryLevelDocument() {
     const project = this.state.project;
     if (!project) return null;
@@ -62,7 +124,7 @@ export class ProjectSession {
     this.setState({
       ...this.state,
       project: nextProject,
-      issues: validateOpenProject(nextProject),
+      issues: [...validateOpenProject(nextProject), ...this.state.issues.filter(isPlayAssetIssue)],
     });
   }
 
@@ -86,11 +148,11 @@ export class ProjectSession {
 
     const result = await bridge.create(rootPath, { id: projectId, name });
     if (!result.ok) {
-      this.setState({ ...EMPTY, issues: result.issues });
+      this.switchProject({ ...EMPTY, issues: result.issues });
       return result.issues;
     }
 
-    this.setState({
+    this.switchProject({
       open: true,
       rootPath: result.value.rootPath,
       project: result.value.project,
@@ -119,11 +181,11 @@ export class ProjectSession {
 
     const result = await bridge.createFromStarter(rootPath, { id: projectId, name });
     if (!result.ok) {
-      this.setState({ ...EMPTY, issues: result.issues });
+      this.switchProject({ ...EMPTY, issues: result.issues });
       return result.issues;
     }
 
-    this.setState({
+    this.switchProject({
       open: true,
       rootPath: result.value.rootPath,
       project: result.value.project,
@@ -143,11 +205,11 @@ export class ProjectSession {
 
     const result = await bridge.load(rootPath);
     if (!result.ok) {
-      this.setState({ ...EMPTY, issues: result.issues });
+      this.switchProject({ ...EMPTY, issues: result.issues });
       return result.issues;
     }
 
-    this.setState({
+    this.switchProject({
       open: true,
       rootPath: result.value.rootPath,
       project: result.value.project,
@@ -195,7 +257,7 @@ export class ProjectSession {
   }
 
   close(): void {
-    this.setState({ ...EMPTY });
+    this.switchProject({ ...EMPTY });
   }
 }
 

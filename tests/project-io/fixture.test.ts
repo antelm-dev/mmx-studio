@@ -33,6 +33,6 @@ test("minimal fixture loads and exports referenced assets only", async () => {
     await rm(exportRoot, { recursive: true, force: true });
   }
 
-  const level = JSON.parse(await readFile(join(fixtureRoot, "levels", "level.main.json"), "utf8"));
-  assert.equal(level.decorations[0]?.assetId, "sprite.bg");
+  const gameData = JSON.parse(await readFile(join(fixtureRoot, "game", "data.json"), "utf8"));
+  assert.equal(gameData.bindings.hudSprites.xBar, "sprite.bg");
 });

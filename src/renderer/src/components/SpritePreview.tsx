@@ -4,7 +4,7 @@ import {
   getDecorationPreview,
   getSpritePreview,
 } from "@mmx/renderer-pixi";
-import { studioAssetCatalog } from "../assets/studioAssets.js";
+import { starterAssets } from "../assets/studioAssets.js";
 import { cx } from "../ui.js";
 
 interface Props {
@@ -23,10 +23,10 @@ export function SpritePreview({
   fallbackColor,
 }: Props) {
   const preview = useMemo(() => {
-    if (assetId) return getDecorationPreview(assetId, studioAssetCatalog);
+    if (assetId) return getDecorationPreview(assetId, starterAssets.catalog);
     if (!definitionId) return null;
     const def = getDefinition(definitionId);
-    return def ? getSpritePreview(def, studioAssetCatalog) : null;
+    return def ? getSpritePreview(def, starterAssets.catalog) : null;
   }, [definitionId, assetId]);
 
   if (preview) {

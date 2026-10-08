@@ -1,6 +1,6 @@
 import { Application } from "pixi.js";
-import { loadEditorAssets } from "@mmx/renderer-pixi";
-import { studioAssetCatalog } from "../assets/studioAssets.js";
+import { loadEditorAssets, type AssetCatalog } from "@mmx/renderer-pixi";
+import { starterAssets } from "../assets/studioAssets.js";
 import type { EditorStore } from "./EditorStore.js";
 import { EditorViewportRenderer } from "./EditorViewportRenderer.js";
 import { EditorViewportInteraction } from "./EditorViewportInteraction.js";
@@ -27,7 +27,7 @@ export class EditorViewport {
     private readonly canvas: HTMLCanvasElement,
     private readonly store: EditorStore,
   ) {
-    this.renderer = new EditorViewportRenderer(app, store, studioAssetCatalog);
+    this.renderer = new EditorViewportRenderer(app, store, starterAssets.catalog);
     this.interaction = new EditorViewportInteraction(
       canvas,
       store,
@@ -67,7 +67,7 @@ export class EditorViewport {
       width: host.clientWidth || 800,
       height: host.clientHeight || 600,
     });
-    await loadEditorAssets(studioAssetCatalog);
+    await loadEditorAssets(starterAssets.catalog);
     const viewport = new EditorViewport(app, canvas, store);
     const resize = (): void => viewport.onResize(host);
     new ResizeObserver(resize).observe(host);
@@ -155,6 +155,13 @@ export class EditorViewport {
       this.interaction.getMarquee(),
       this.interaction.pointerWorld,
     );
+  }
+
+  /** Draw from another asset catalog (e.g. after a project is opened). */
+  async setAssets(assets: AssetCatalog): Promise<void> {
+    await loadEditorAssets(assets);
+    this.renderer.setAssets(assets);
+    this.redraw();
   }
 
   /** Hide/show the editing surface (Play mode swaps in the game renderer). */
