@@ -1,5 +1,6 @@
 import { Box, Menu, Portal } from "@chakra-ui/react";
-import type { ComponentProps } from "react";
+import { Check } from "lucide-react";
+import type { ComponentProps, ReactNode } from "react";
 
 export const MenuRoot = Menu.Root;
 export const MenuTrigger = Menu.Trigger;
@@ -46,10 +47,6 @@ export function MenuItem(props: ComponentProps<typeof Menu.Item>) {
 /** Opens the enclosing `MenuRoot` at the pointer on DOM right-click (`asChild` on the row). */
 export const MenuContextTrigger = Menu.ContextTrigger;
 
-export function MenuSeparator(props: ComponentProps<typeof Menu.Separator>) {
-  return <Menu.Separator my="1" mx="0" borderColor="studio.popoverBorder" {...props} />;
-}
-
 /** Non-interactive caption row inside a menu (section heading, context info). */
 export function MenuLabel(props: ComponentProps<typeof Box>) {
   return (
@@ -63,5 +60,71 @@ export function MenuLabel(props: ComponentProps<typeof Box>) {
       color="studio.muted"
       {...props}
     />
+  );
+}
+
+/** Titled block of items (`role="group"` labelled by its heading). */
+export function MenuGroup({ label, children }: Readonly<{ label: ReactNode; children: ReactNode }>) {
+  return (
+    <Menu.ItemGroup>
+      <Menu.ItemGroupLabel
+        px="3"
+        pt="1.5"
+        pb="1"
+        fontSize="10px"
+        fontWeight="semibold"
+        textTransform="uppercase"
+        letterSpacing="0.6px"
+        color="studio.fgTertiary"
+      >
+        {label}
+      </Menu.ItemGroupLabel>
+      {children}
+    </Menu.ItemGroup>
+  );
+}
+
+/** `border="0"`: with preflight off, the underlying `<hr>` would draw its default rule. */
+export function MenuSeparator(props: ComponentProps<typeof Menu.Separator>) {
+  return <Menu.Separator h="1px" my="1.5" mx="2" border="0" bg="studio.popoverBorder" {...props} />;
+}
+
+/** Right-aligned keyboard hint inside an item. */
+export function MenuShortcut({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <Menu.ItemCommand
+      ps="5"
+      opacity="1"
+      fontSize="10.5px"
+      letterSpacing="wide"
+      fontVariantNumeric="tabular-nums"
+      color="studio.fgTertiary"
+    >
+      {children}
+    </Menu.ItemCommand>
+  );
+}
+
+/** Toggle item with a leading check slot that keeps labels aligned when unchecked. */
+export function MenuCheckboxItem({ children, ...props }: ComponentProps<typeof Menu.CheckboxItem>) {
+  return (
+    <Menu.CheckboxItem
+      gap="9px"
+      px="3"
+      py="1.5"
+      rounded="0"
+      fontSize="12.5px"
+      color="studio.menuFg"
+      cursor="pointer"
+      _highlighted={{ bg: "studio.popoverHover", color: "studio.menuFgHover" }}
+      {...props}
+    >
+      <Box as="span" display="inline-flex" w="3.5" justifyContent="center" flex="none">
+        <Menu.ItemIndicator position="static" transform="none">
+          <Check size={13} />
+        </Menu.ItemIndicator>
+      </Box>
+      {children}
+    </Menu.CheckboxItem>
   );
 }
