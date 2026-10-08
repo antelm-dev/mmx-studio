@@ -5,7 +5,6 @@ import {
   getSpritePreview,
 } from "@mmx/renderer-pixi";
 import { starterAssets } from "../assets/studioAssets.js";
-import { cx } from "../ui.js";
 
 interface Props {
   definitionId?: string;
@@ -34,11 +33,8 @@ export function SpritePreview({
     const scale = Math.min(size / rw, size / rh);
     return (
       <span
-        className={cx(
-          "grid place-items-center flex-none overflow-hidden rounded-md bg-raised ring-1 ring-border",
-          flip && "-scale-x-100",
-        )}
-        style={{ width: size, height: size }}
+        className="grid place-items-center flex-none overflow-hidden rounded-md bg-raised ring-1 ring-border"
+        style={{ width: size, height: size, transform: flip ? "scaleX(-1)" : undefined }}
         title={assetId ?? definitionId}
       >
         <span

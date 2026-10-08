@@ -19,7 +19,7 @@ import {
 import type { ActorSnapshot, FrameStatsSnapshot, PlaytestDebugInfo } from "@mmx/editor-runtime";
 import { editor, usePlaytestSnapshot } from "../app/useEditor.js";
 import { useUiStore } from "../store/uiStore.js";
-import { cx } from "../ui.js";
+import { OverlayButton, OverlayCard, OverlayLabel, OverlayValue } from "../ui/editor/overlay.js";
 import { fmtAbilities, fmtHealth, fmtPosition, fmtVec } from "../core/playtest/format.js";
 
 /**
@@ -40,7 +40,7 @@ export function PlaytestDebugger(): ReactElement | null {
 
   return (
     <div className="absolute z-[4] top-3 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 pointer-events-none">
-      <div className="pointer-events-auto flex items-center gap-1 h-9 px-1.5 bg-[rgba(12,17,26,0.94)] border border-[rgba(64,77,100,0.72)] rounded-xl shadow-[0_6px_20px_rgba(0,0,0,0.34)] backdrop-blur-[10px]">
+      <OverlayCard className="pointer-events-auto flex items-center gap-1 h-9 px-1.5">
         <IconButton
           label={paused ? "Resume (F8)" : "Pause (F8)"}
           onClick={() => editor.playtestTogglePause()}
@@ -111,7 +111,7 @@ export function PlaytestDebugger(): ReactElement | null {
         >
           <Bug size={14} />
         </IconButton>
-      </div>
+      </OverlayCard>
 
       <TimelineStrip
         frame={snap.frame}
@@ -123,9 +123,16 @@ export function PlaytestDebugger(): ReactElement | null {
       <PerformanceReadout stats={snap.frameStats} debug={debug} />
 
       {debug.notice && (
-        <div className="pointer-events-none px-2.5 py-1 bg-[rgba(12,17,26,0.94)] border border-[rgba(64,77,100,0.72)] rounded-lg text-[11px] text-[#d8e7ff]">
+        <OverlayCard
+          className="pointer-events-none px-2.5 py-1"
+          rounded="lg"
+          boxShadow="none"
+          backdropFilter="none"
+          fontSize="11px"
+          color="#d8e7ff"
+        >
           {debug.notice}
-        </div>
+        </OverlayCard>
       )}
 
       {inspectorVisible && runtime && (
@@ -148,8 +155,10 @@ function TimelineStrip({
 }): ReactElement {
   const max = Math.max(recordedLength, frame, 1);
   return (
-    <div className="pointer-events-auto flex items-center gap-2 max-w-[520px] w-[min(520px,92vw)] px-2.5 py-1.5 bg-[rgba(12,17,26,0.94)] border border-[rgba(64,77,100,0.72)] rounded-xl shadow-[0_6px_20px_rgba(0,0,0,0.34)] backdrop-blur-[10px]">
-      <Gauge size={12} className="text-[#7c8da7] flex-none" />
+    <OverlayCard className="pointer-events-auto flex items-center gap-2 max-w-[520px] w-[min(520px,92vw)] px-2.5 py-1.5">
+      <OverlayLabel display="inline-flex" flex="none">
+        <Gauge size={12} />
+      </OverlayLabel>
       <input
         type="range"
         min={0}
@@ -157,14 +166,15 @@ function TimelineStrip({
         value={frame}
         disabled={!paused && recordedLength === 0}
         onChange={(e) => editor.playtestSeek(Number(e.target.value))}
-        className="flex-1 accent-[#4b8eff] h-1.5 cursor-pointer disabled:opacity-40"
+        className="flex-1 h-1.5 cursor-pointer disabled:opacity-40"
+        style={{ accentColor: "#4b8eff" }}
         aria-label="Seek timeline"
         title={`Seek to frame (ckpt ${checkpointFrame})`}
       />
-      <span className="font-mono text-[10.5px] text-[#edf3fc] tabular-nums flex-none">
+      <OverlayValue fontSize="10.5px" flex="none">
         {frame}/{max}
-      </span>
-    </div>
+      </OverlayValue>
+    </OverlayCard>
   );
 }
 
@@ -176,7 +186,11 @@ function PerformanceReadout({
   debug: PlaytestDebugInfo;
 }): ReactElement {
   return (
-    <div className="pointer-events-none flex flex-col items-stretch gap-1 max-w-[520px] px-2.5 py-1.5 bg-[rgba(12,17,26,0.94)] border border-[rgba(64,77,100,0.72)] rounded-xl shadow-[0_6px_20px_rgba(0,0,0,0.34)] backdrop-blur-[10px] text-[10.5px] text-[#b4c1d4]">
+    <OverlayCard
+      className="pointer-events-none flex flex-col items-stretch gap-1 max-w-[520px] px-2.5 py-1.5"
+      fontSize="10.5px"
+      color="#b4c1d4"
+    >
       <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
         <Readout label="fps" value={stats.fps.toFixed(1)} />
         <TimingReadout label="sim" summary={stats.simulation} />
@@ -186,10 +200,16 @@ function PerformanceReadout({
         <Readout label="rec" value={String(debug.recordedLength)} />
         {debug.tainted && <Readout label="replay" value="tainted" />}
       </div>
-      <div className="text-center text-[8.5px] uppercase tracking-[0.4px] text-[#5f7088]">
+      <OverlayLabel
+        display="block"
+        textAlign="center"
+        fontSize="8.5px"
+        letterSpacing="0.4px"
+        color="#5f7088"
+      >
         timing median / p95 / worst (ms)
-      </div>
-    </div>
+      </OverlayLabel>
+    </OverlayCard>
   );
 }
 
@@ -202,10 +222,10 @@ function TimingReadout({
 }): ReactElement {
   return (
     <div className="flex items-center gap-1.5 px-0.5" title="median / p95 / worst (ms)">
-      <span className="text-[9.5px] uppercase tracking-[0.5px] text-[#7c8da7]">{label}</span>
-      <span className="font-mono text-[11px] text-[#edf3fc] tabular-nums">
+      <OverlayLabel>{label}</OverlayLabel>
+      <OverlayValue>
         {fmtMs(summary.median)} / {fmtMs(summary.p95)} / {fmtMs(summary.worst)}
-      </span>
+      </OverlayValue>
     </div>
   );
 }
@@ -227,22 +247,24 @@ function RuntimeInspector({
   const selected = actors.find((a) => a.runtimeId === selectedRuntimeId) ?? runtime.player;
 
   return (
-    <div className="pointer-events-auto w-[236px] p-2.5 bg-[rgba(12,17,26,0.94)] border border-[rgba(64,77,100,0.72)] rounded-xl shadow-[0_6px_20px_rgba(0,0,0,0.34)] backdrop-blur-[10px] text-[11px] text-[#b4c1d4]">
+    <OverlayCard className="pointer-events-auto w-[236px] p-2.5" fontSize="11px" color="#b4c1d4">
       {actors.length > 1 && (
         <div className="flex flex-wrap gap-1 mb-2">
           {actors.map((a) => (
-            <button
+            <OverlayButton
               key={a.runtimeId}
               onClick={() => editor.playtestSelect(a.runtimeId)}
-              className={cx(
-                "px-1.5 h-6 rounded-md text-[10.5px] font-semibold cursor-pointer border transition-colors",
-                a.runtimeId === selected.runtimeId
-                  ? "bg-[rgba(75,142,255,0.15)] text-[#d8e7ff] border-[rgba(75,142,255,0.4)]"
-                  : "text-[#7c8da7] border-transparent hover:bg-[#1b2636] hover:text-[#edf3fc]",
-              )}
+              active={a.runtimeId === selected.runtimeId}
+              h="6"
+              px="1.5"
+              rounded="md"
+              fontSize="10.5px"
+              {...(a.runtimeId === selected.runtimeId
+                ? { borderColor: "rgba(75,142,255,0.4)" }
+                : { color: "#7c8da7" })}
             >
               {a.kind}
-            </button>
+            </OverlayButton>
           ))}
         </div>
       )}
@@ -257,14 +279,17 @@ function RuntimeInspector({
       <Field label="abilities" value={fmtAbilities(selected.abilities)} />
 
       {selected.sourceEntityId && (
-        <button
+        <OverlayButton
           onClick={() => editor.playtestFocusSource()}
-          className="mt-2 w-full inline-flex items-center justify-center gap-1.5 h-7 rounded-lg border border-[#3a4960] text-[#b4c1d4] text-[11px] font-semibold cursor-pointer hover:bg-[#1b2636] hover:text-[#edf3fc] transition-colors"
+          mt="2"
+          w="full"
+          borderColor="#3a4960"
+          fontSize="11px"
         >
           <Crosshair size={12} /> Focus authored object
-        </button>
+        </OverlayButton>
       )}
-    </div>
+    </OverlayCard>
   );
 }
 
@@ -282,21 +307,16 @@ function IconButton({
   children: ReactNode;
 }): ReactElement {
   return (
-    <button
-      type="button"
+    <OverlayButton
       aria-label={label}
       title={label}
       disabled={disabled}
+      active={active}
       onClick={onClick}
-      className={cx(
-        "inline-flex items-center justify-center w-8 h-7 rounded-lg cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-default",
-        active
-          ? "bg-[rgba(75,142,255,0.15)] text-[#d8e7ff]"
-          : "text-[#b4c1d4] enabled:hover:bg-[#1b2636] enabled:hover:text-[#edf3fc]",
-      )}
+      w="8"
     >
       {children}
-    </button>
+    </OverlayButton>
   );
 }
 
@@ -307,8 +327,8 @@ function Divider(): ReactElement {
 function Readout({ label, value }: { label: string; value: string }): ReactElement {
   return (
     <div className="flex items-center gap-1.5 px-1.5">
-      <span className="text-[9.5px] uppercase tracking-[0.5px] text-[#7c8da7]">{label}</span>
-      <span className="font-mono text-[11px] text-[#edf3fc] tabular-nums">{value}</span>
+      <OverlayLabel>{label}</OverlayLabel>
+      <OverlayValue>{value}</OverlayValue>
     </div>
   );
 }
@@ -324,12 +344,15 @@ function Field({
 }): ReactElement {
   return (
     <div className="flex items-baseline justify-between gap-2 py-[1.5px]">
-      <span className="text-[10px] uppercase tracking-[0.4px] text-[#7c8da7] flex-none">
+      <OverlayLabel fontSize="10px" letterSpacing="0.4px" flex="none">
         {label}
-      </span>
-      <span className={cx("text-right truncate text-[#edf3fc]", mono && "font-mono text-[10.5px]")}>
+      </OverlayLabel>
+      <OverlayValue
+        className="text-right truncate"
+        {...(mono ? { fontSize: "10.5px" } : { fontFamily: "inherit", fontSize: "inherit" })}
+      >
         {value}
-      </span>
+      </OverlayValue>
     </div>
   );
 }
