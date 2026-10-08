@@ -1,7 +1,5 @@
 import { useMemo } from "react";
-import * as Select from "@radix-ui/react-select";
-import * as Checkbox from "@radix-ui/react-checkbox";
-import { Check, ChevronDown, Grid3x3, ListTree, MousePointer2, Sparkles } from "lucide-react";
+import { Grid3x3, ListTree, MousePointer2, Sparkles } from "lucide-react";
 import {
   DECORATION_LAYERS,
   TerrainTile,
@@ -22,18 +20,12 @@ import { getDecorationAsset } from "@mmx/renderer-pixi";
 import { LOADOUT_IDS } from "@mmx/project-io";
 import { editor, projectSession, useEditorSnapshot, useProjectSession } from "../app/useEditor.js";
 import { selectedDecorationIds, selectedObjectIds } from "../core/EditorStore.js";
-import {
-  actionBtn,
-  actionBtnDanger,
-  actions,
-  cx,
-  fieldLabel,
-  inputCls,
-  panel,
-  scroll,
-  sectionTitle,
-  sectionTitleSub,
-} from "../ui.js";
+import { actions, cx, panel, scroll } from "../ui.js";
+import { ActionButton } from "../ui/editor/action-button.js";
+import { Checkbox } from "../ui/editor/checkbox.js";
+import { Field, FieldInput } from "../ui/editor/field.js";
+import { SectionTitle } from "../ui/editor/section-title.js";
+import { Select } from "../ui/editor/select.js";
 import { SpritePreview } from "./SpritePreview.js";
 import { focusPanel } from "../app/dock.js";
 
@@ -169,122 +161,74 @@ export function Inspector() {
               </div>
             ))}
 
-            <div className={cx(sectionTitle, sectionTitleSub)}>Transform</div>
+            <SectionTitle divider>Transform</SectionTitle>
             <div className="grid grid-cols-2 gap-2 py-[3px] px-3.5">
-              <label className="flex flex-col min-w-0">
-                <span className={fieldLabel}>X</span>
-                <input
-                  className={inputCls()}
+              <Field label="X">
+                <FieldInput
                   type="number"
                   defaultValue={single.inst.x}
                   key={`x-${single.inst.id}-${single.inst.x}`}
                   onBlur={(e) => onTransform(single, "x", e.target.value)}
                 />
-              </label>
-              <label className="flex flex-col min-w-0">
-                <span className={fieldLabel}>Y</span>
-                <input
-                  className={inputCls()}
+              </Field>
+              <Field label="Y">
+                <FieldInput
                   type="number"
                   defaultValue={single.inst.y}
                   key={`y-${single.inst.id}-${single.inst.y}`}
                   onBlur={(e) => onTransform(single, "y", e.target.value)}
                 />
-              </label>
+              </Field>
             </div>
             {single.def.editor.resizable && (
               <div className="grid grid-cols-2 gap-2 py-[3px] px-3.5">
-                <label className="flex flex-col min-w-0">
-                  <span className={fieldLabel}>Width</span>
-                  <input
-                    className={inputCls(hasIssue("width"))}
+                <Field label="Width" invalid={hasIssue("width")}>
+                  <FieldInput
                     type="number"
                     defaultValue={single.width}
                     key={`w-${single.inst.id}-${single.width}`}
                     onBlur={(e) => onTransform(single, "width", e.target.value)}
                   />
-                </label>
-                <label className="flex flex-col min-w-0">
-                  <span className={fieldLabel}>Height</span>
-                  <input
-                    className={inputCls(hasIssue("height"))}
+                </Field>
+                <Field label="Height" invalid={hasIssue("height")}>
+                  <FieldInput
                     type="number"
                     defaultValue={single.height}
                     key={`h-${single.inst.id}-${single.height}`}
                     onBlur={(e) => onTransform(single, "height", e.target.value)}
                   />
-                </label>
+                </Field>
               </div>
             )}
 
             {single.def.properties.length > 0 && (
               <>
-                <div className={cx(sectionTitle, sectionTitleSub)}>Properties</div>
+                <SectionTitle divider>Properties</SectionTitle>
                 {single.def.properties.map((prop) => (
                   <div className="py-[3px] px-3.5" key={prop.key}>
                     {prop.type === "boolean" ? (
-                      <label className="flex items-center gap-[9px] text-xs text-fg cursor-pointer">
-                        <Checkbox.Root
-                          className="w-[18px] h-[18px] inline-flex items-center justify-center border border-border-strong rounded-[5px] bg-raised data-[state=checked]:bg-accent data-[state=checked]:border-accent data-[state=checked]:text-white"
-                          checked={effectiveValue(single.inst, prop.key) === true}
-                          onCheckedChange={(c) => onBool(single.inst, prop, c === true)}
-                        >
-                          <Checkbox.Indicator>
-                            <Check size={14} />
-                          </Checkbox.Indicator>
-                        </Checkbox.Root>
-                        {prop.label}
-                      </label>
+                      <Checkbox
+                        label={prop.label}
+                        checked={effectiveValue(single.inst, prop.key) === true}
+                        onCheckedChange={(c) => onBool(single.inst, prop, c)}
+                      />
                     ) : prop.type === "enum" ? (
-                      <>
-                        <span className={fieldLabel}>{prop.label}</span>
-                        <Select.Root
-                          value={str(single.inst, prop.key)}
-                          onValueChange={(v) => onEnum(single.inst, prop, v)}
-                        >
-                          <Select.Trigger
-                            className={cx(
-                              "flex items-center justify-between gap-2 w-full h-8 px-[9px] border rounded-[7px] bg-raised text-fg text-xs cursor-pointer outline-none",
-                              hasIssue(prop.key) ? "border-danger-fg" : "border-border-strong",
-                            )}
-                          >
-                            <Select.Value />
-                            <Select.Icon>
-                              <ChevronDown size={14} />
-                            </Select.Icon>
-                          </Select.Trigger>
-                          <Select.Portal>
-                            <Select.Content
-                              className="z-[60] bg-popover border border-popover-border rounded-lg shadow-[0_12px_32px_rgba(0,0,0,0.45)] py-1 overflow-hidden"
-                              position="popper"
-                              sideOffset={4}
-                            >
-                              <Select.Viewport>
-                                {prop.options?.map((opt) => (
-                                  <Select.Item
-                                    key={opt}
-                                    value={opt}
-                                    className="flex items-center h-[30px] px-3 text-menu-fg text-xs cursor-pointer outline-none data-[highlighted]:bg-popover-hover data-[highlighted]:text-menu-fg-hover"
-                                  >
-                                    <Select.ItemText>{opt}</Select.ItemText>
-                                  </Select.Item>
-                                ))}
-                              </Select.Viewport>
-                            </Select.Content>
-                          </Select.Portal>
-                        </Select.Root>
-                      </>
+                      <Select
+                        label={prop.label}
+                        options={(prop.options ?? []).map((opt) => ({ label: opt, value: opt }))}
+                        value={str(single.inst, prop.key)}
+                        onValueChange={(v) => onEnum(single.inst, prop, v)}
+                        invalid={hasIssue(prop.key)}
+                      />
                     ) : (
-                      <>
-                        <span className={fieldLabel}>{prop.label}</span>
-                        <input
-                          className={inputCls(hasIssue(prop.key))}
+                      <Field label={prop.label} invalid={hasIssue(prop.key)}>
+                        <FieldInput
                           type={prop.type === "number" ? "number" : "text"}
                           defaultValue={str(single.inst, prop.key)}
                           key={`${prop.key}-${single.inst.id}-${str(single.inst, prop.key)}`}
                           onBlur={(e) => onProp(single.inst, prop, e.target.value)}
                         />
-                      </>
+                      </Field>
                     )}
                     {issueFor(prop.key) ? (
                       <div className={errText}>{issueFor(prop.key)!.message}</div>
@@ -297,12 +241,12 @@ export function Inspector() {
             )}
 
             <div className={actions}>
-              <button className={actionBtn} onClick={() => editor.duplicateSelection()}>
+              <ActionButton onClick={() => editor.duplicateSelection()}>
                 Duplicate
-              </button>
-              <button className={actionBtnDanger} onClick={() => editor.deleteSelection()}>
+              </ActionButton>
+              <ActionButton danger onClick={() => editor.deleteSelection()}>
                 Delete
-              </button>
+              </ActionButton>
             </div>
           </>
         ) : objectIds.length > 1 ? (
@@ -315,12 +259,12 @@ export function Inspector() {
               <div className={emptyCopy}>Duplicate or delete the current selection.</div>
             </div>
             <div className={actions}>
-              <button className={actionBtn} onClick={() => editor.duplicateSelection()}>
+              <ActionButton onClick={() => editor.duplicateSelection()}>
                 Duplicate
-              </button>
-              <button className={actionBtnDanger} onClick={() => editor.deleteSelection()}>
+              </ActionButton>
+              <ActionButton danger onClick={() => editor.deleteSelection()}>
                 Delete
-              </button>
+              </ActionButton>
             </div>
           </>
         ) : singleDecoration ? (
@@ -335,12 +279,12 @@ export function Inspector() {
               <div className={emptyCopy}>Duplicate or delete the current selection.</div>
             </div>
             <div className={actions}>
-              <button className={actionBtn} onClick={() => editor.duplicateSelection()}>
+              <ActionButton onClick={() => editor.duplicateSelection()}>
                 Duplicate
-              </button>
-              <button className={actionBtnDanger} onClick={() => editor.deleteSelection()}>
+              </ActionButton>
+              <ActionButton danger onClick={() => editor.deleteSelection()}>
                 Delete
-              </button>
+              </ActionButton>
             </div>
           </>
         ) : singleTile ? (
@@ -356,7 +300,7 @@ export function Inspector() {
                 </span>
               </div>
             </div>
-            <div className={cx(sectionTitle, sectionTitleSub)}>Terrain</div>
+            <SectionTitle divider>Terrain</SectionTitle>
             <div className="py-1 px-3.5 text-xs flex justify-between gap-2.5">
               <span className="text-muted">Index</span>
               <span className="font-mono text-[#e6ebf5]">{singleTile.index}</span>
@@ -366,9 +310,9 @@ export function Inspector() {
               <span className="font-mono text-[#e6ebf5]">{tileKindLabel(singleTile.value)}</span>
             </div>
             <div className={actions}>
-              <button className={actionBtnDanger} onClick={() => editor.deleteSelection()}>
+              <ActionButton danger onClick={() => editor.deleteSelection()}>
                 Erase tile
-              </button>
+              </ActionButton>
             </div>
           </>
         ) : tileSelection.length > 1 ? (
@@ -381,9 +325,9 @@ export function Inspector() {
               <div className={emptyCopy}>Erase the selected terrain cells with Delete.</div>
             </div>
             <div className={actions}>
-              <button className={actionBtnDanger} onClick={() => editor.deleteSelection()}>
+              <ActionButton danger onClick={() => editor.deleteSelection()}>
                 Erase tiles
-              </button>
+              </ActionButton>
             </div>
           </>
         ) : (
@@ -424,39 +368,14 @@ function ProjectSettings() {
   const loadout = project.manifest.player?.loadout ?? "player.x";
   return (
     <>
-      <div className={cx(sectionTitle, sectionTitleSub)}>Project</div>
+      <SectionTitle divider>Project</SectionTitle>
       <div className="flex flex-col py-[3px] px-3.5">
-        <span className={fieldLabel}>Player loadout</span>
-        <Select.Root value={loadout} onValueChange={(id) => projectSession.setPlayerLoadout(id)}>
-          <Select.Trigger
-            aria-label="Player loadout"
-            className="flex items-center justify-between gap-2 w-full h-8 px-[9px] border border-border-strong rounded-[7px] bg-raised text-fg text-xs cursor-pointer outline-none"
-          >
-            <Select.Value />
-            <Select.Icon>
-              <ChevronDown size={14} />
-            </Select.Icon>
-          </Select.Trigger>
-          <Select.Portal>
-            <Select.Content
-              className="z-[60] bg-popover border border-popover-border rounded-lg shadow-[0_12px_32px_rgba(0,0,0,0.45)] py-1 overflow-hidden"
-              position="popper"
-              sideOffset={4}
-            >
-              <Select.Viewport>
-                {LOADOUT_IDS.map((id) => (
-                  <Select.Item
-                    key={id}
-                    value={id}
-                    className="flex items-center h-[30px] px-3 text-menu-fg text-xs cursor-pointer outline-none data-[highlighted]:bg-popover-hover data-[highlighted]:text-menu-fg-hover"
-                  >
-                    <Select.ItemText>{loadoutLabel(id)}</Select.ItemText>
-                  </Select.Item>
-                ))}
-              </Select.Viewport>
-            </Select.Content>
-          </Select.Portal>
-        </Select.Root>
+        <Select
+          label="Player loadout"
+          options={LOADOUT_IDS.map((id) => ({ label: loadoutLabel(id), value: id }))}
+          value={loadout}
+          onValueChange={(id) => projectSession.setPlayerLoadout(id)}
+        />
       </div>
     </>
   );
@@ -510,109 +429,70 @@ function DecorationInspector({ inst }: { inst: DecorationInstance }) {
         </div>
       </div>
 
-      <div className={cx(sectionTitle, sectionTitleSub)}>Layer</div>
+      <SectionTitle divider>Layer</SectionTitle>
       <div className="py-[3px] px-3.5">
-        <Select.Root value={inst.layer} onValueChange={onLayer}>
-          <Select.Trigger className="flex items-center justify-between gap-2 w-full h-8 px-[9px] border border-border-strong rounded-[7px] bg-raised text-fg text-xs cursor-pointer outline-none">
-            <Select.Value />
-            <Select.Icon>
-              <ChevronDown size={14} />
-            </Select.Icon>
-          </Select.Trigger>
-          <Select.Portal>
-            <Select.Content
-              className="z-[60] bg-popover border border-popover-border rounded-lg shadow-[0_12px_32px_rgba(0,0,0,0.45)] py-1 overflow-hidden"
-              position="popper"
-              sideOffset={4}
-            >
-              <Select.Viewport>
-                {DECORATION_LAYERS.map((l) => (
-                  <Select.Item
-                    key={l}
-                    value={l}
-                    className="flex items-center h-[30px] px-3 text-menu-fg text-xs cursor-pointer outline-none data-[highlighted]:bg-popover-hover data-[highlighted]:text-menu-fg-hover"
-                  >
-                    <Select.ItemText>{l}</Select.ItemText>
-                  </Select.Item>
-                ))}
-              </Select.Viewport>
-            </Select.Content>
-          </Select.Portal>
-        </Select.Root>
+        <Select
+          aria-label="Layer"
+          options={DECORATION_LAYERS.map((l) => ({ label: l, value: l }))}
+          value={inst.layer}
+          onValueChange={onLayer}
+        />
       </div>
 
-      <div className={cx(sectionTitle, sectionTitleSub)}>Properties</div>
+      <SectionTitle divider>Properties</SectionTitle>
       <div className="py-[3px] px-3.5">
-        <label className="flex items-center gap-[9px] text-xs text-fg cursor-pointer mb-2">
-          <Checkbox.Root
-            className="w-[18px] h-[18px] inline-flex items-center justify-center border border-border-strong rounded-[5px] bg-raised data-[state=checked]:bg-accent data-[state=checked]:border-accent data-[state=checked]:text-white"
-            checked={inst.flipX === true}
-            onCheckedChange={(c) => onFlip("flipX", c === true)}
-          >
-            <Checkbox.Indicator>
-              <Check size={14} />
-            </Checkbox.Indicator>
-          </Checkbox.Root>
-          Flip X
-        </label>
-        <label className="flex items-center gap-[9px] text-xs text-fg cursor-pointer mb-2">
-          <Checkbox.Root
-            className="w-[18px] h-[18px] inline-flex items-center justify-center border border-border-strong rounded-[5px] bg-raised data-[state=checked]:bg-accent data-[state=checked]:border-accent data-[state=checked]:text-white"
-            checked={inst.flipY === true}
-            onCheckedChange={(c) => onFlip("flipY", c === true)}
-          >
-            <Checkbox.Indicator>
-              <Check size={14} />
-            </Checkbox.Indicator>
-          </Checkbox.Root>
-          Flip Y
-        </label>
+        <Checkbox
+          label="Flip X"
+          mb="2"
+          checked={inst.flipX === true}
+          onCheckedChange={(c) => onFlip("flipX", c)}
+        />
+        <Checkbox
+          label="Flip Y"
+          mb="2"
+          checked={inst.flipY === true}
+          onCheckedChange={(c) => onFlip("flipY", c)}
+        />
       </div>
       <div className="grid grid-cols-2 gap-2 py-[3px] px-3.5">
-        <label className="flex flex-col min-w-0">
-          <span className={fieldLabel}>Rotation</span>
-          <input
-            className={inputCls()}
+        <Field label="Rotation">
+          <FieldInput
             type="number"
             step="any"
             defaultValue={inst.rotation ?? 0}
             key={`rot-${inst.id}-${inst.rotation}`}
             onBlur={(e) => onRotation(e.target.value)}
           />
-        </label>
-        <label className="flex flex-col min-w-0">
-          <span className={fieldLabel}>Parallax</span>
-          <input
-            className={inputCls()}
+        </Field>
+        <Field label="Parallax">
+          <FieldInput
             type="number"
             step="any"
             defaultValue={inst.parallax ?? 1}
             key={`par-${inst.id}-${inst.parallax}`}
             onBlur={(e) => onParallax(e.target.value)}
           />
-        </label>
+        </Field>
       </div>
       <div className="py-[3px] px-3.5">
-        <label className="flex flex-col min-w-0">
-          <span className={fieldLabel}>Tint (hex)</span>
-          <input
-            className={inputCls()}
+        <Field label="Tint (hex)">
+          <FieldInput
             type="text"
             defaultValue={inst.tint !== undefined ? inst.tint.toString(16).padStart(6, "0") : ""}
             key={`tint-${inst.id}-${inst.tint}`}
             placeholder="ffffff"
             onBlur={(e) => onTint(e.target.value)}
           />
-        </label>
+        </Field>
       </div>
 
       <div className={actions}>
-        <button className={actionBtn} onClick={() => editor.duplicateSelection()}>
+        <ActionButton onClick={() => editor.duplicateSelection()}>
           Duplicate
-        </button>
-        <button className={actionBtnDanger} onClick={() => editor.deleteSelection()}>
+        </ActionButton>
+        <ActionButton danger onClick={() => editor.deleteSelection()}>
           Delete
-        </button>
+        </ActionButton>
       </div>
     </>
   );
