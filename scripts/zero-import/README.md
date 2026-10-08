@@ -48,19 +48,20 @@ ATTRIBUTION.md                       copied from templates/mmx-demo
 ### Sprites
 
 - Every frame of every anim gets one fixed cell, 16 cells per row. The cell is the
-  smallest even size that fits all frames (72x52 today).
+  smallest even size that fits all frames (72x54 today).
 - Frames are mirrored so Zero faces right, like X's frames.
-- The engine draws a fixed region centred at `feet - BODY_HALF_H (14) - 4` (see
-  `renderer-pixi/src/render/sprite.ts`), so each frame's mirrored anchor is placed at
-  `(cell.w / 2, cell.h / 2 + 18)`.
+- The engine draws a fixed region centred at `feet - body_hh - 4` (see
+  `renderer-pixi/src/render/sprite.ts`), with `body_hh` = 15 for the `player.zero` actor
+  (`engine/src/data/actors.ts`), so each frame's mirrored anchor is placed at
+  `(cell.w / 2, cell.h / 2 + 19)`.
 
 ### Clips
 
 `speed` is 60 and `duration` stays in 1/60 s (`AnimationCursor` holds a frame for
 `duration / speed` s). A `0xff` script becomes `loop: false`; a `0xfe` script becomes
-`loop: true`. The engine always loops back to frame 0, so a script that loops to step
-k > 0 drops its first k steps from the looping clip (jump/fall/dash/run/wall slide lose
-their wind-up). Fixing that needs a `loopStart` in the engine's `ClipData`.
+`loop: true` with every step kept; a script that loops to step k > 0 also gets
+`loopStart: k`, so the wind-up (jump/fall/dash/run/wall slide) plays once and the cursor
+then wraps to step k.
 
 Every move of `zero_moves.json` is emitted under its own name (`idle`, `run`, `dash`,
 `dash_end`, `jump`, `fall`, `land`, `slash_1`..`slash_3`, `dash_slash`, `jump_slash`,
@@ -71,7 +72,7 @@ abilities play are then added:
 | --- | --- | --- |
 | `idle` | `idle` | |
 | `walk` | `run` | loop body |
-| `walk_start` | `run`, steps before the loop target | one-shot, Walk waits for it to finish |
+| `walk_start` | `run`, steps before the loop target | one-shot, Walk waits for it to finish. Kept because the engine's Walk still plays `walk_start` then `walk` itself (so the wind-up shows twice); it could derive this from `walk`'s `loopStart` instead |
 | `jump` | `jump` | |
 | `fall` | `fall` | |
 | `dash` | `dash` | |

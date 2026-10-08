@@ -11,19 +11,30 @@ import { cellSize, FEET_BELOW_CENTRE, placeInCell, splitScript, tileOf, Tile, to
 describe("zero-import conversions", () => {
   const region = (f) => [f * 10, 0, 10, 10];
 
-  it("turns a loop-to-step-k script into a looping body and a one-shot intro", () => {
+  it("turns a loop-to-step-k script into one looping clip with loopStart", () => {
     const script = [[0, 2], [1, 2], [2, 4], [3, 4], [2, 0xfe]];
     expect(splitScript(script)).toEqual({
-      intro: [{ frame: 0, duration: 2 }, { frame: 1, duration: 2 }],
-      body: [{ frame: 2, duration: 4 }, { frame: 3, duration: 4 }],
+      steps: [{ frame: 0, duration: 2 }, { frame: 1, duration: 2 }, { frame: 2, duration: 4 }, { frame: 3, duration: 4 }],
       loop: true,
+      loopStart: 2,
     });
     expect(toClip(script, region)).toEqual({
       loop: true,
+      loopStart: 2,
       speed: 60,
-      frames: [{ duration: 4, region: [20, 0, 10, 10] }, { duration: 4, region: [30, 0, 10, 10] }],
+      frames: [
+        { duration: 2, region: [0, 0, 10, 10] },
+        { duration: 2, region: [10, 0, 10, 10] },
+        { duration: 4, region: [20, 0, 10, 10] },
+        { duration: 4, region: [30, 0, 10, 10] },
+      ],
     });
-    expect(toClip(script, region, "intro").loop).toBe(false);
+    expect(toClip([[0, 2], [1, 2], [0, 0xfe]], region)).not.toHaveProperty("loopStart");
+    expect(toClip(script, region, "intro")).toEqual({
+      loop: false,
+      speed: 60,
+      frames: [{ duration: 2, region: [0, 0, 10, 10] }, { duration: 2, region: [10, 0, 10, 10] }],
+    });
     expect(toClip(script, region, "first").frames).toEqual([{ duration: 2, region: [0, 0, 10, 10] }]);
   });
 
@@ -45,7 +56,7 @@ describe("zero-import conversions", () => {
   it("places the mirrored anchor at the fixed feet spot of the cell", () => {
     const frames = [[0, 0, 34, 39, 19, 35], [0, 0, 44, 34, 29, 30]];
     const cell = cellSize(frames);
-    expect(cell).toEqual({ w: 58, h: 44 });
+    expect(cell).toEqual({ w: 58, h: 46 });
     for (const f of frames) {
       const { dx, dy } = placeInCell(f, cell);
       const [, , w, h, ax, ay] = f;
