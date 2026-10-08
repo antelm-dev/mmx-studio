@@ -1,19 +1,28 @@
 import type { ReactNode } from "react";
-import * as RadixTooltip from "@radix-ui/react-tooltip";
+import { Portal, Tooltip as ChakraTooltip } from "@chakra-ui/react";
 
-/** Thin Radix tooltip wrapper with the app's dark styling. */
+/** Studio tooltip: the child stays the trigger; content is portalled above Dockview. */
 export function Tooltip({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <RadixTooltip.Root>
-      <RadixTooltip.Trigger asChild>{children}</RadixTooltip.Trigger>
-      <RadixTooltip.Portal>
-        <RadixTooltip.Content
-          className="z-[80] px-[9px] py-[5px] rounded-md bg-tooltip border border-border-strong text-fg text-[11px] shadow-[0_8px_20px_rgba(0,0,0,0.4)]"
-          sideOffset={6}
-        >
-          {label}
-        </RadixTooltip.Content>
-      </RadixTooltip.Portal>
-    </RadixTooltip.Root>
+    <ChakraTooltip.Root openDelay={350} closeDelay={0} positioning={{ gutter: 6 }}>
+      <ChakraTooltip.Trigger asChild>{children}</ChakraTooltip.Trigger>
+      <Portal>
+        <ChakraTooltip.Positioner>
+          <ChakraTooltip.Content
+            px="9px"
+            py="5px"
+            rounded="md"
+            bg="studio.tooltip"
+            border="1px solid"
+            borderColor="studio.borderStrong"
+            color="studio.fg"
+            fontSize="11px"
+            boxShadow="0 8px 20px rgba(0,0,0,0.4)"
+          >
+            {label}
+          </ChakraTooltip.Content>
+        </ChakraTooltip.Positioner>
+      </Portal>
+    </ChakraTooltip.Root>
   );
 }
