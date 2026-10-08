@@ -7,9 +7,10 @@ const HOLD = 0xff;
 /** TerrainTile values from @mmx/contracts/terrain (on-disk ids). */
 export const Tile = { Empty: 0, Solid: 1, SlopeUpRight: 2, SlopeUpLeft: 3 };
 
-// renderer-pixi draws the sprite centre at feet - BODY_HALF_H (14) - 4 (SPRITE_OFFSET_Y),
-// so the anchor (Zero's feet) sits this far below the cell centre.
-export const FEET_BELOW_CENTRE = 18;
+// renderer-pixi draws the sprite centre at feet - body_hh - 4 (renderer-pixi/src/render/sprite.ts,
+// SPRITE_OFFSET_Y) with body_hh = 15 for player.zero (engine/src/data/actors.ts), so the
+// anchor (Zero's feet) sits 15 + 4 below the cell centre.
+export const FEET_BELOW_CENTRE = 19;
 
 /**
  * MMZ animation script -> steps. A script is [[frame, duration in 1/60 s], ...] ended by

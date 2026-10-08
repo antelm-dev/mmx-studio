@@ -48,11 +48,12 @@ ATTRIBUTION.md                       copied from templates/mmx-demo
 ### Sprites
 
 - Every frame of every anim gets one fixed cell, 16 cells per row. The cell is the
-  smallest even size that fits all frames (72x52 today).
+  smallest even size that fits all frames (72x54 today).
 - Frames are mirrored so Zero faces right, like X's frames.
-- The engine draws a fixed region centred at `feet - BODY_HALF_H (14) - 4` (see
-  `renderer-pixi/src/render/sprite.ts`), so each frame's mirrored anchor is placed at
-  `(cell.w / 2, cell.h / 2 + 18)`.
+- The engine draws a fixed region centred at `feet - body_hh - 4` (see
+  `renderer-pixi/src/render/sprite.ts`), with `body_hh` = 15 for the `player.zero` actor
+  (`engine/src/data/actors.ts`), so each frame's mirrored anchor is placed at
+  `(cell.w / 2, cell.h / 2 + 19)`.
 
 ### Clips
 

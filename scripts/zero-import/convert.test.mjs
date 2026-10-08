@@ -56,7 +56,7 @@ describe("zero-import conversions", () => {
   it("places the mirrored anchor at the fixed feet spot of the cell", () => {
     const frames = [[0, 0, 34, 39, 19, 35], [0, 0, 44, 34, 29, 30]];
     const cell = cellSize(frames);
-    expect(cell).toEqual({ w: 58, h: 44 });
+    expect(cell).toEqual({ w: 58, h: 46 });
     for (const f of frames) {
       const { dx, dy } = placeInCell(f, cell);
       const [, , w, h, ax, ay] = f;
