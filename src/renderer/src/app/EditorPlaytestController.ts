@@ -183,6 +183,7 @@ export class EditorPlaytestController {
     this.playToken++;
     this.play?.dispose();
     this.play = null;
+    this.audio?.stopMusic();
     this.setSnapshot(STOPPED_PLAYTEST);
     this.cb.onModeChange("edit");
     this.cb.setViewportVisible(true);

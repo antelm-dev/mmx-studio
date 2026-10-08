@@ -1,5 +1,5 @@
 // 8-bit RGBA non-interlaced PNG, the only kind the Zero × MMX import reads or writes
-// (same pattern as scripts/zero-import/index.mjs; Studio has no PNG library).
+// (Studio has no PNG library; node:zlib is enough).
 import { crc32, deflateSync, inflateSync } from "node:zlib";
 
 /** Row-major RGBA pixels. */

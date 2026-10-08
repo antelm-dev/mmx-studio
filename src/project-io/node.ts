@@ -134,3 +134,33 @@ export {
   type SpriteAtlas,
   type Mmz1Sprites,
 } from "./import/mmz1.js";
+
+export {
+  splitScript,
+  toClip,
+  tileOf,
+  cellSize,
+  placeInCell,
+  introHighwayArt,
+  cameraZones,
+  Tile,
+  FEET_BELOW_CENTRE,
+  X_CLIPS,
+  SOUND_ROLES,
+  type Clip,
+  type ClipMode,
+  type Frame,
+  type Region,
+  type CameraLimits,
+} from "./import/convert.js";
+export { ZERO_MOVES, ZERO_SOUNDS } from "./import/sheets.js";
+export {
+  ZERO_PROJECT_ID,
+  readZeroSources,
+  readZeroSourcesFromCache,
+  writeZeroProject,
+  zeroSheet,
+  introHighwayLevel,
+  type ZeroSources,
+  type Progress,
+} from "./import/zeroProject.js";

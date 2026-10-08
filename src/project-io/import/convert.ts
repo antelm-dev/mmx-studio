@@ -1,24 +1,40 @@
-// Pure conversions from the zero-x-mashup cache formats to Studio project formats.
-// See README.md in this folder for both formats and the mapping.
+// Pure conversions from the reader formats (zero.json, stage.json shapes) to Studio project formats.
+// Formats and the mapping are documented in docs/zero-import.md.
 import { VIEW_HEIGHT, VIEW_WIDTH } from "@mmx/engine";
+
+import type { Step } from "./mmz1.js";
 
 const LOOP = 0xfe;
 const HOLD = 0xff;
 
 /** TerrainTile values from @mmx/contracts/terrain (on-disk ids). */
-export const Tile = { Empty: 0, Solid: 1, SlopeUpRight: 2, SlopeUpLeft: 3 };
+export const Tile = { Empty: 0, Solid: 1, SlopeUpRight: 2, SlopeUpLeft: 3 } as const;
 
 // renderer-pixi draws the sprite centre at feet - body_hh - 4 (renderer-pixi/src/render/sprite.ts,
 // SPRITE_OFFSET_Y) with body_hh = 15 for player.zero (engine/src/data/actors.ts), so the
 // anchor (Zero's feet) sits 15 + 4 below the cell centre.
 export const FEET_BELOW_CENTRE = 19;
 
+export type Region = [number, number, number, number];
+/** An atlas frame: [x, y, w, h, anchorX, anchorY]. */
+export type Frame = [number, number, number, number, number, number];
+
+export interface Clip {
+  loop: boolean;
+  loopStart?: number;
+  speed: number;
+  frames: { duration: number; region: Region }[];
+}
+
+/** "intro" = steps before the loop target, "first" = first step only, "once" = all steps without looping. */
+export type ClipMode = "intro" | "first" | "once";
+
 /**
  * MMZ animation script -> steps. A script is [[frame, duration in 1/60 s], ...] ended by
  * [k, 0xfe] (loop back to step k) or [_, 0xff] (hold the last step).
- * Returns { steps, loop, loopStart }: `loopStart` is k for a looping script, else 0.
+ * `loopStart` is k for a looping script, else 0.
  */
-export function splitScript(script) {
+export function splitScript(script: Step[]): { steps: { frame: number; duration: number }[]; loop: boolean; loopStart: number } {
   const end = script.findIndex(([, d]) => d === LOOP || d === HOLD);
   const steps = (end < 0 ? script : script.slice(0, end)).map(([frame, duration]) => ({ frame, duration }));
   if (steps.some((s) => s.duration <= 0)) throw new Error(`script has a zero-length step: ${JSON.stringify(script)}`);
@@ -29,14 +45,12 @@ export function splitScript(script) {
 }
 
 /**
- * Steps -> AnimationClip. Durations stay in 1/60 s with speed 60 (AnimationCursor holds a
- * frame for duration / speed seconds). `regionOf(frame)` gives the atlas cell. A loop to
- * step k > 0 keeps every step and sets `loopStart: k`.
- * mode: undefined = steady clip, "intro" = steps before the loop target, "first" = first
- * step only, "once" = all steps without looping. The non-steady modes are one-shots,
+ * Script -> AnimationClip. Durations stay in 1/60 s with speed 60 (AnimationCursor holds a
+ * frame for duration / speed seconds). `regionOf(frame)` gives the sheet cell. A loop to
+ * step k > 0 keeps every step and sets `loopStart: k`. The non-steady modes are one-shots,
  * which the abilities need where they wait for animation_finished.
  */
-export function toClip(script, regionOf, mode) {
+export function toClip(script: Step[], regionOf: (frame: number) => Region, mode?: ClipMode): Clip {
   const { steps: all, loop: loops, loopStart } = splitScript(script);
   const steps = mode === "intro" ? all.slice(0, loopStart) : mode === "first" ? all.slice(0, 1) : all;
   if (steps.length === 0) throw new Error(`no steps for mode ${mode}: ${JSON.stringify(script)}`);
@@ -50,12 +64,12 @@ export function toClip(script, regionOf, mode) {
 }
 
 /**
- * MMX1 collision byte -> [TerrainTile, slope profile | undefined]. Profiles are [left, right]
- * fill heights in px from the tile base. 0x05-0x08 rise 4 px per tile left to right,
- * 0x09-0x0c are their mirror. Everything else non-zero (0x34/0x35 walkable top, 0x39/0x3a,
- * 0x3b solid) is Solid: the engine has no one-way tile.
+ * MMX1 collision byte -> [TerrainTile, slope profile?]. Profiles are [left, right] fill heights
+ * in px from the tile base. 0x05-0x08 rise 4 px per tile left to right, 0x09-0x0c are their
+ * mirror. Everything else non-zero (0x34/0x35 walkable top, 0x39/0x3a, 0x3b solid) is Solid:
+ * the engine has no one-way tile.
  */
-export function tileOf(byte) {
+export function tileOf(byte: number): [number, [number, number]?] {
   if (byte === 0) return [Tile.Empty];
   if (byte >= 0x05 && byte <= 0x08) {
     const i = byte - 0x05;
@@ -69,7 +83,7 @@ export function tileOf(byte) {
 }
 
 /** Smallest even cell that holds every frame with its (mirrored) anchor at the fixed spot. */
-export function cellSize(frames) {
+export function cellSize(frames: Frame[]): { w: number; h: number } {
   let half = 0, up = 0, down = 0;
   for (const [, , w, h, ax, ay] of frames) {
     half = Math.max(half, ax, w - ax);
@@ -83,7 +97,7 @@ export function cellSize(frames) {
  * Where a frame's top-left goes inside its cell. GBA frames face left and the engine
  * expects right-facing frames, so the frame is mirrored and its anchor with it.
  */
-export function placeInCell([, , w, , ax, ay], cell) {
+export function placeInCell([, , w, , ax, ay]: Frame, cell: { w: number; h: number }): { dx: number; dy: number } {
   return { dx: cell.w / 2 - (w - ax), dy: cell.h / 2 + FEET_BELOW_CENTRE - ay };
 }
 
@@ -92,29 +106,36 @@ export function placeInCell([, , w, , ax, ay], cell) {
  * world-locked; `background.png` scrolls at half speed (MMX1 shifts it by camX / 2, and
  * its y stays 0 on the highway). `backdrop` is palette colour 0 as [r, g, b].
  */
-export function introHighwayArt(backdrop) {
+export function introHighwayArt(backdrop: number[]) {
   const hex = backdrop.map((c) => c.toString(16).padStart(2, "0")).join("");
   return {
     imageLayers: [
-      { id: "art-background", assetId: "image.background", x: 0, y: 0, parallax: 0.5, layer: "background" },
-      { id: "art-stage", assetId: "image.stage", x: 0, y: 0, parallax: 1, layer: "world-back" },
+      { id: "art-background", assetId: "image.background", x: 0, y: 0, parallax: 0.5, layer: "background" as const },
+      { id: "art-stage", assetId: "image.stage", x: 0, y: 0, parallax: 1, layer: "world-back" as const },
     ],
     backdrop: `#${hex}`,
   };
 }
 
+export interface CameraLimits {
+  x: number;
+  min_x: number;
+  max_x: number;
+  min_y: number;
+  max_y: number;
+}
+
 /**
  * Checkpoint camera limits -> `camera-zone` objects. MMX limits bound the view's top-left
  * corner (min..max), a CameraZone bounds the whole view, so the far edges add the engine's
- * view size (engine PR #28: that puts its pit line, zone bottom + 32, where MMX's is).
- * Consecutive checkpoints with the same limits are one section, one zone: the engine binds
- * the view to the zone the player is in, so cutting identical limits at checkpoint X would
- * only shove the view at each seam. Zones must not overlap, else the engine's
- * current-zone hysteresis, not the stage, decides which limits apply.
+ * view size (that puts its pit line, zone bottom + 32, where MMX's is). Consecutive
+ * checkpoints with the same limits are one section, one zone: the engine binds the view to
+ * the zone the player is in, so cutting identical limits would only shove the view at each
+ * seam. Zones must not overlap, else the engine's hysteresis, not the stage, decides.
  */
-export function cameraZones(cameras, worldW, worldH) {
-  const same = (a, b) => ["min_x", "max_x", "min_y", "max_y"].every((k) => a[k] === b[k]);
-  const zones = [];
+export function cameraZones(cameras: CameraLimits[], worldW: number, worldH: number) {
+  const same = (a: CameraLimits, b: CameraLimits) => a.min_x === b.min_x && a.max_x === b.max_x && a.min_y === b.min_y && a.max_y === b.max_y;
+  const zones: { id: string; definitionId: "camera-zone"; x: number; y: number; width: number; height: number }[] = [];
   cameras.forEach((c, i) => {
     if (i > 0 && same(c, cameras[i - 1])) return;
     zones.push({
@@ -135,8 +156,26 @@ export function cameraZones(cameras, worldW, worldH) {
   return zones;
 }
 
+/** X clip name -> [Zero move, mode]: the clips X's abilities play. Fallbacks are listed in docs/zero-import.md. */
+export const X_CLIPS: Record<string, [string, ClipMode?]> = {
+  idle: ["idle"],
+  weak: ["idle"],
+  recover: ["idle", "first"],
+  walk_start: ["run", "intro"],
+  walk: ["run"],
+  jump: ["jump"],
+  fall: ["fall"],
+  dash: ["dash"],
+  slide: ["wall_slide"],
+  walljump: ["wall_jump"],
+  damage: ["hurt"],
+  beam: ["fall"],
+  beam_in: ["land", "once"],
+  beam_equip: ["idle", "once"],
+};
+
 /**
- * sounds.json role -> engine sound id (@mmx/browser-audio GAMEPLAY_SOUND_IDS, plus the
- * optional `slash`). Roles with no engine id (enemy_shot, wall_kick) are left out.
+ * Sound role -> engine sound id (@mmx/browser-audio GAMEPLAY_SOUND_IDS, plus the optional
+ * `slash`). Roles with no engine id (enemy_shot, wall_kick) are left out.
  */
-export const SOUND_ROLES = { slash: "slash", dash: "dash", land: "land", buster_shot: "lemon", hurt: "damage" };
+export const SOUND_ROLES: Record<string, string> = { slash: "slash", dash: "dash", land: "land", buster_shot: "lemon", hurt: "damage" };

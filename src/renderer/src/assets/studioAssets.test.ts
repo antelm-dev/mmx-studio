@@ -23,6 +23,13 @@ describe("buildStudioAssets", () => {
     expect(starterAssets.manifest.playerSheet).not.toBe(manifest.playerSheet);
   });
 
+  it("binds the stage music to the runtime id musicStage", () => {
+    const withMusic = { bindings: { ...gameData.bindings, music: { stage: "music.stage" } } };
+    const { soundBindings, soundIds } = buildStudioAssets(project, withMusic, resolveUrl);
+    expect(soundBindings.musicStage).toBe("music.stage");
+    expect(soundIds).toEqual(["music.stage"]);
+  });
+
   it("throws a readable error for missing or invalid bindings", () => {
     const broken = { bindings: { ...gameData.bindings, playerAnimation: "anim.nope" } };
     expect(() => buildStudioAssets(project, broken, resolveUrl)).toThrow(/anim\.nope/);

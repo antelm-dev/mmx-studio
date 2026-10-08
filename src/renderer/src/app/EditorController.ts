@@ -341,6 +341,24 @@ export class EditorController {
     this.toast(`Opened project '${projectSession.getSnapshot().project?.manifest.name ?? ""}'.`);
   }
 
+  async importFromSteam(): Promise<void> {
+    if (!this.confirmDiscardIfDirty("Import a project from your Steam installs?")) return;
+    if (this.store.get().mode === "play") this.togglePlay();
+    const issues = await projectSession.importFromSteam((step) => this.toast(`Import: ${step}…`));
+    if (issues.some((issue) => issue.severity === "error")) {
+      this.toast(`Import failed: ${issues[0]?.message ?? "validation error"}`);
+      return;
+    }
+    void this.applyProjectAssets();
+    const entry = projectSession.getEntryLevelDocument();
+    if (!entry) {
+      this.toast("Imported, but no entry level was found.");
+      return;
+    }
+    this.openDocument(entry);
+    this.toast(`Imported project '${projectSession.getSnapshot().project?.manifest.name ?? ""}'.`);
+  }
+
   async exportProject(): Promise<void> {
     const issues = await projectSession.exportProject();
     if (issues.some((issue) => issue.severity === "error")) {
