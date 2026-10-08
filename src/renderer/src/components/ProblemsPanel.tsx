@@ -10,7 +10,8 @@ import type { ValidationIssue } from "@mmx/content-schema";
 import type { ProjectIssue } from "@mmx/project-io";
 import type { DockviewPanelApi } from "dockview-react";
 import { editor, useEditorSnapshot, useProjectSession } from "../app/useEditor.js";
-import { cx, panel, scroll } from "../ui.js";
+import { cx } from "../ui.js";
+import { Panel, PanelScroll } from "../ui/editor/panel.js";
 
 const dot = "inline-block w-2 h-2 rounded-full flex-none";
 
@@ -96,8 +97,8 @@ export function ProblemsPanel({ api }: { api?: DockviewPanelApi }): ReactElement
   });
 
   return (
-    <div className={panel}>
-      <div className={scroll}>
+    <Panel>
+      <PanelScroll>
         {issues.length === 0 ? (
           <div className="px-3 py-3.5 text-xs text-[#7f91aa]">
             <span className={cx(dot, "bg-success mr-[7px]")} /> No problems detected. Ready to play.
@@ -124,7 +125,7 @@ export function ProblemsPanel({ api }: { api?: DockviewPanelApi }): ReactElement
             </tbody>
           </table>
         )}
-      </div>
-    </div>
+      </PanelScroll>
+    </Panel>
   );
 }

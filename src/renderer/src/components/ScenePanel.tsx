@@ -15,7 +15,10 @@ import type { DockviewPanelApi } from "dockview-react";
 import { editor, useEditorSnapshot } from "../app/useEditor.js";
 import { selectedDecorationIds, selectedObjectIds } from "../core/EditorStore.js";
 import { useUiStore } from "../store/uiStore.js";
-import { cx, itemCls, panel, scroll, sectionTitle } from "../ui.js";
+import { cx } from "../ui.js";
+import { ListRow } from "../ui/editor/list-row.js";
+import { Panel, PanelScroll } from "../ui/editor/panel.js";
+import { SectionTitle } from "../ui/editor/section-title.js";
 import {
   MenuContent,
   MenuContextTrigger,
@@ -52,10 +55,10 @@ export function ScenePanel({ api }: { api?: DockviewPanelApi }): ReactElement {
   useEffect(() => api?.setTitle(`Scene (${total})`), [api, total]);
 
   return (
-    <div className={panel}>
+    <Panel>
       <SceneList items={sceneItems} snap={snap} />
       {decorations.length > 0 && <DecorationSceneList decorations={decorations} snap={snap} />}
-    </div>
+    </Panel>
   );
 }
 
@@ -172,9 +175,9 @@ function SceneList({
 
   if (items.length === 0) {
     return (
-      <div className={scroll} ref={scrollRef}>
+      <PanelScroll ref={scrollRef}>
         <div className={emptyNote}>No objects in the scene. Place one from the Object Palette.</div>
-      </div>
+      </PanelScroll>
     );
   }
 
@@ -190,7 +193,7 @@ function SceneList({
           {grouped ? "Grouped" : "Flat"}
         </button>
       </div>
-      <div className={scroll} ref={scrollRef}>
+      <PanelScroll ref={scrollRef}>
         <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
           {virtualizer.getVirtualItems().map((v) => {
             const row = rows[v.index];
@@ -225,8 +228,8 @@ function SceneList({
             return (
               <div key={v.key} style={style}>
                 <SceneRowMenu inst={inst} selectedCount={selectedCount}>
-                  <button
-                    className={itemCls(active)}
+                  <ListRow
+                    active={active}
                     title={inst.id}
                     onClick={(e) =>
                       e.ctrlKey || e.metaKey
@@ -253,13 +256,13 @@ function SceneList({
                         {inst.x}, {inst.y}
                       </span>
                     </span>
-                  </button>
+                  </ListRow>
                 </SceneRowMenu>
               </div>
             );
           })}
         </div>
-      </div>
+      </PanelScroll>
     </>
   );
 }
@@ -276,20 +279,20 @@ function DecorationSceneList({
 
   return (
     <div className="flex-none border-t border-border">
-      <div className={cx(sectionTitle, "pt-2 pb-1")}>
+      <SectionTitle pt="2" pb="1">
         Decorations
         <span className="font-mono text-[9px] font-medium tracking-normal normal-case text-muted ml-1.5">
           {decorations.length}
         </span>
-      </div>
+      </SectionTitle>
       {decorations.map((dec) => {
         const asset = getDecorationAsset(dec.assetId);
         const name = asset?.name ?? dec.assetId;
         const active = selected.has(dec.id);
         return (
-          <button
+          <ListRow
             key={dec.id}
-            className={itemCls(active)}
+            active={active}
             title={dec.id}
             onClick={(e) =>
               e.ctrlKey || e.metaKey
@@ -304,7 +307,7 @@ function DecorationSceneList({
                 {dec.x}, {dec.y} · {dec.layer}
               </span>
             </span>
-          </button>
+          </ListRow>
         );
       })}
     </div>

@@ -15,6 +15,7 @@ import {
   MenuRoot,
   MenuSeparator,
 } from "../ui/primitives/menu.js";
+import { Keycap, OverlayCard } from "../ui/editor/overlay.js";
 import { PlaytestDebugger } from "./PlaytestDebugger.js";
 
 interface PlaceGroup {
@@ -64,28 +65,46 @@ export function Viewport() {
         {mode === "edit" && (
           <>
             <div className="absolute z-[3] pointer-events-none left-3.5 top-3.5 flex items-center gap-2">
-              <div className="inline-flex items-center gap-2 h-8 px-2.5 text-[11px] font-bold text-[#edf3fc] bg-[rgba(12,17,26,0.9)] border border-[rgba(64,77,100,0.72)] rounded-lg shadow-[0_5px_18px_rgba(0,0,0,0.28)] backdrop-blur-[10px]">
+              <OverlayCard
+                className="inline-flex items-center gap-2 h-8 px-2.5"
+                bg="rgba(12,17,26,0.9)"
+                rounded="lg"
+                boxShadow="0 5px 18px rgba(0,0,0,0.28)"
+                fontSize="11px"
+                fontWeight="bold"
+                color="#edf3fc"
+              >
                 {snap.state.activeTool === "tile" ? (
-                  <Paintbrush size={14} className="text-[#4b8eff]" />
+                  <Paintbrush size={14} color="#4b8eff" />
                 ) : (
-                  <MousePointer2 size={14} className="text-[#4b8eff]" />
+                  <MousePointer2 size={14} color="#4b8eff" />
                 )}
                 {snap.state.activeTool === "tile" ? "Tile paint" : "Select / move"}
-              </div>
-              <div className="inline-flex items-center gap-2 h-8 px-2.5 text-[10.5px] font-mono text-[#b4c1d4] bg-[rgba(12,17,26,0.8)] border border-[rgba(64,77,100,0.6)] rounded-lg backdrop-blur-[10px]">
+              </OverlayCard>
+              <OverlayCard
+                className="inline-flex items-center gap-2 h-8 px-2.5"
+                bg="rgba(12,17,26,0.8)"
+                borderColor="rgba(64,77,100,0.6)"
+                rounded="lg"
+                boxShadow="none"
+                fontSize="10.5px"
+                fontFamily="mono"
+                color="#b4c1d4"
+              >
                 <span>{Math.round(snap.state.zoom * 100)}%</span>
                 <span className="w-px h-3 bg-[#3a4960]" />
-                <Grid3x3
-                  size={12}
-                  className={snap.state.gridVisible ? "text-[#4b8eff]" : "text-[#7c8da7]"}
-                />
-                <Magnet
-                  size={12}
-                  className={snap.state.snapEnabled ? "text-[#4b8eff]" : "text-[#7c8da7]"}
-                />
-              </div>
+                <Grid3x3 size={12} color={snap.state.gridVisible ? "#4b8eff" : "#7c8da7"} />
+                <Magnet size={12} color={snap.state.snapEnabled ? "#4b8eff" : "#7c8da7"} />
+              </OverlayCard>
             </div>
-            <div className="absolute z-[3] text-[10.5px] pointer-events-none left-1/2 -translate-x-1/2 bottom-3.5 text-[#94a4ba] bg-[rgba(12,17,26,0.9)] border border-[rgba(64,77,100,0.72)] rounded-[10px] px-3 py-2 shadow-[0_5px_18px_rgba(0,0,0,0.28)] backdrop-blur-[10px] whitespace-nowrap">
+            <OverlayCard
+              className="absolute z-[3] pointer-events-none left-1/2 -translate-x-1/2 bottom-3.5 px-3 py-2 whitespace-nowrap"
+              bg="rgba(12,17,26,0.9)"
+              rounded="10px"
+              boxShadow="0 5px 18px rgba(0,0,0,0.28)"
+              fontSize="10.5px"
+              color="#94a4ba"
+            >
               {snap.state.activeTool === "tile" ? (
                 <>
                   <Keycap>T</Keycap> paint tiles <HintDot /> <Keycap>Alt</Keycap> erase <HintDot />{" "}
@@ -97,7 +116,7 @@ export function Viewport() {
                   <Keycap>Space</Keycap> pan <HintDot /> <Keycap>T</Keycap> paint
                 </>
               )}
-            </div>
+            </OverlayCard>
           </>
         )}
         {mode === "play" && <PlaytestDebugger />}
@@ -181,14 +200,6 @@ function Swatch({ style }: { style: CSSProperties }) {
     <span
       style={{ width: 12, height: 12, borderRadius: 3, flex: "none", boxSizing: "border-box", ...style }}
     />
-  );
-}
-
-function Keycap({ children }: { children: string }) {
-  return (
-    <span className="inline-flex items-center justify-center min-w-[19px] h-[19px] mx-1 px-1.5 rounded-[5px] border border-[#3a4960] bg-[#161e2b] text-[9px] font-mono font-bold text-[#edf3fc]">
-      {children}
-    </span>
   );
 }
 

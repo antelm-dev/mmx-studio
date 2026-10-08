@@ -1,10 +1,12 @@
 import { useMemo, useRef, useState } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { Eye, EyeOff, Lock, Plus, Search, Unlock, X } from "lucide-react";
+import { Eye, EyeOff, Lock, Search, Unlock, X } from "lucide-react";
 import { DECORATION_LAYERS, type DecorationLayer } from "@mmx/content-schema";
 import { DECORATION_ASSETS, type DecorationAsset } from "@mmx/renderer-pixi";
 import { editor, useEditorSnapshot } from "../app/useEditor.js";
-import { cx, itemCls, panel, scroll, sectionTitle } from "../ui.js";
+import { ListRow, ListRowAdd } from "../ui/editor/list-row.js";
+import { Panel, PanelScroll } from "../ui/editor/panel.js";
+import { SectionTitle } from "../ui/editor/section-title.js";
 import { SpritePreview } from "./SpritePreview.js";
 
 const cat =
@@ -32,7 +34,7 @@ export function AssetsPanel() {
   const [query, setQuery] = useState("");
 
   return (
-    <div className={panel}>
+    <Panel>
       <div className="flex items-center gap-2 h-9 mt-3 mx-3 mb-2 px-2.5 border border-border-strong rounded-lg bg-raised shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] transition-[border-color,box-shadow] duration-[120ms] focus-within:border-accent focus-within:shadow-[0_0_0_3px_rgba(59,130,246,0.12)]">
         <Search size={16} className="text-fg-3" />
         <input
@@ -54,7 +56,7 @@ export function AssetsPanel() {
       </div>
       <DecorationList query={query} snap={snap} />
       <LayerToggles snap={snap} />
-    </div>
+    </Panel>
   );
 }
 
@@ -96,14 +98,14 @@ function DecorationList({
 
   if (rows.length === 0) {
     return (
-      <div className={scroll} ref={scrollRef}>
+      <PanelScroll ref={scrollRef}>
         <div className="px-3 py-3.5 text-muted text-xs">No decorations match your search.</div>
-      </div>
+      </PanelScroll>
     );
   }
 
   return (
-    <div className={scroll} ref={scrollRef}>
+    <PanelScroll ref={scrollRef}>
       <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
         {virtualizer.getVirtualItems().map((v) => {
           const row = rows[v.index];
@@ -125,22 +127,20 @@ function DecorationList({
           const { asset } = row;
           return (
             <div key={v.key} style={style}>
-              <button
-                className={itemCls(isActive(asset.id))}
+              <ListRow
+                active={isActive(asset.id)}
                 title={`Place ${asset.name}`}
                 onClick={() => editor.selectDecorationPalette(asset.id)}
               >
                 <SpritePreview assetId={asset.id} size={28} />
                 <span className={itemName}>{asset.name}</span>
-                <span className="grid place-items-center w-6 h-6 rounded-md opacity-0 bg-raised text-fg-2 ring-1 ring-border group-hover:opacity-100 group-hover:text-accent transition-opacity">
-                  <Plus size={16} strokeWidth={2.5} />
-                </span>
-              </button>
+                <ListRowAdd />
+              </ListRow>
             </div>
           );
         })}
       </div>
-    </div>
+    </PanelScroll>
   );
 }
 
@@ -150,7 +150,9 @@ function LayerToggles({ snap }: { snap: ReturnType<typeof useEditorSnapshot> }) 
 
   return (
     <div className="flex-none border-t border-border">
-      <div className={cx(sectionTitle, "pt-2 pb-1")}>Layers</div>
+      <SectionTitle pt="2" pb="1">
+        Layers
+      </SectionTitle>
       {DECORATION_LAYERS.map((layer: DecorationLayer) => (
         <div key={layer} className="flex items-center gap-1.5 px-3 py-0.5 text-xs text-fg-2">
           <button

@@ -2,7 +2,7 @@ import { useMemo, type ReactElement } from "react";
 import { instanceSize, requireDefinition, TerrainTile } from "@mmx/content-schema";
 import { useEditorSnapshot } from "../app/useEditor.js";
 import { selectedObjectIds, selectionSize } from "../core/EditorStore.js";
-import { panel, scroll } from "../ui.js";
+import { Panel, PanelScroll } from "../ui/editor/panel.js";
 
 interface Kv {
   k: string;
@@ -68,15 +68,15 @@ export function SelectionPanel(): ReactElement {
   }, [snap.state]);
 
   return (
-    <div className={panel}>
-      <div className={scroll}>
+    <Panel>
+      <PanelScroll>
         {selection.map((row) => (
           <div className="py-1 px-3 text-xs flex justify-between gap-2.5" key={row.k}>
             <span className="text-muted">{row.k}</span>
             <span className="font-mono text-[#e6ebf5] text-right break-all">{row.v}</span>
           </div>
         ))}
-      </div>
-    </div>
+      </PanelScroll>
+    </Panel>
   );
 }

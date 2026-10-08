@@ -20,10 +20,11 @@ import { getDecorationAsset } from "@mmx/renderer-pixi";
 import { LOADOUT_IDS } from "@mmx/project-io";
 import { editor, projectSession, useEditorSnapshot, useProjectSession } from "../app/useEditor.js";
 import { selectedDecorationIds, selectedObjectIds } from "../core/EditorStore.js";
-import { actions, cx, panel, scroll } from "../ui.js";
+import { cx } from "../ui.js";
 import { ActionButton } from "../ui/editor/action-button.js";
 import { Checkbox } from "../ui/editor/checkbox.js";
 import { Field, FieldInput } from "../ui/editor/field.js";
+import { Panel, PanelActions, PanelScroll } from "../ui/editor/panel.js";
 import { SectionTitle } from "../ui/editor/section-title.js";
 import { Select } from "../ui/editor/select.js";
 import { SpritePreview } from "./SpritePreview.js";
@@ -134,8 +135,8 @@ export function Inspector() {
     s.def.category === "enemy" && effectiveValue(s.inst, "FacesRight") === true;
 
   return (
-    <div className={panel}>
-      <div className={scroll}>
+    <Panel>
+      <PanelScroll>
         {single ? (
           <>
             <div className="flex items-center gap-3 pt-4 px-3.5 pb-3 font-semibold">
@@ -240,14 +241,14 @@ export function Inspector() {
               </>
             )}
 
-            <div className={actions}>
+            <PanelActions>
               <ActionButton onClick={() => editor.duplicateSelection()}>
                 Duplicate
               </ActionButton>
               <ActionButton danger onClick={() => editor.deleteSelection()}>
                 Delete
               </ActionButton>
-            </div>
+            </PanelActions>
           </>
         ) : objectIds.length > 1 ? (
           <>
@@ -258,14 +259,14 @@ export function Inspector() {
               <div className={emptyTitle}>{objectIds.length} objects selected</div>
               <div className={emptyCopy}>Duplicate or delete the current selection.</div>
             </div>
-            <div className={actions}>
+            <PanelActions>
               <ActionButton onClick={() => editor.duplicateSelection()}>
                 Duplicate
               </ActionButton>
               <ActionButton danger onClick={() => editor.deleteSelection()}>
                 Delete
               </ActionButton>
-            </div>
+            </PanelActions>
           </>
         ) : singleDecoration ? (
           <DecorationInspector inst={singleDecoration} />
@@ -278,14 +279,14 @@ export function Inspector() {
               <div className={emptyTitle}>{decorationIds.length} decorations selected</div>
               <div className={emptyCopy}>Duplicate or delete the current selection.</div>
             </div>
-            <div className={actions}>
+            <PanelActions>
               <ActionButton onClick={() => editor.duplicateSelection()}>
                 Duplicate
               </ActionButton>
               <ActionButton danger onClick={() => editor.deleteSelection()}>
                 Delete
               </ActionButton>
-            </div>
+            </PanelActions>
           </>
         ) : singleTile ? (
           <>
@@ -309,11 +310,11 @@ export function Inspector() {
               <span className="text-muted">Kind</span>
               <span className="font-mono text-[#e6ebf5]">{tileKindLabel(singleTile.value)}</span>
             </div>
-            <div className={actions}>
+            <PanelActions>
               <ActionButton danger onClick={() => editor.deleteSelection()}>
                 Erase tile
               </ActionButton>
-            </div>
+            </PanelActions>
           </>
         ) : tileSelection.length > 1 ? (
           <>
@@ -324,11 +325,11 @@ export function Inspector() {
               <div className={emptyTitle}>{tileSelection.length} tiles selected</div>
               <div className={emptyCopy}>Erase the selected terrain cells with Delete.</div>
             </div>
-            <div className={actions}>
+            <PanelActions>
               <ActionButton danger onClick={() => editor.deleteSelection()}>
                 Erase tiles
               </ActionButton>
-            </div>
+            </PanelActions>
           </>
         ) : (
           <>
@@ -350,8 +351,8 @@ export function Inspector() {
           </div>
           </>
         )}
-      </div>
-    </div>
+      </PanelScroll>
+    </Panel>
   );
 }
 
@@ -486,14 +487,14 @@ function DecorationInspector({ inst }: { inst: DecorationInstance }) {
         </Field>
       </div>
 
-      <div className={actions}>
+      <PanelActions>
         <ActionButton onClick={() => editor.duplicateSelection()}>
           Duplicate
         </ActionButton>
         <ActionButton danger onClick={() => editor.deleteSelection()}>
           Delete
         </ActionButton>
-      </div>
+      </PanelActions>
     </>
   );
 }

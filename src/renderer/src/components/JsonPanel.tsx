@@ -3,7 +3,8 @@ import Editor from "@monaco-editor/react";
 import { editor, useEditorSnapshot } from "../app/useEditor.js";
 import { parseDocument, serializeDocument } from "../core/persistence.js";
 import { useUiStore } from "../store/uiStore.js";
-import { actionBtn, actions, cx, panel } from "../ui.js";
+import { ActionButton } from "../ui/editor/action-button.js";
+import { Panel, PanelActions } from "../ui/editor/panel.js";
 import { setupMonaco } from "./monacoSetup.js";
 
 setupMonaco();
@@ -37,15 +38,15 @@ export function JsonPanel() {
   };
 
   return (
-    <div className={panel}>
-      <div className={cx(actions, "border-b border-border")}>
-        <button className={actionBtn} disabled={!dirty} onClick={apply}>
+    <Panel>
+      <PanelActions borderBottom="1px solid" borderColor="studio.border">
+        <ActionButton disabled={!dirty} onClick={apply}>
           Apply changes
-        </button>
-        <button className={actionBtn} disabled={!dirty} onClick={() => setBuffer(serialized)}>
+        </ActionButton>
+        <ActionButton disabled={!dirty} onClick={() => setBuffer(serialized)}>
           Revert
-        </button>
-      </div>
+        </ActionButton>
+      </PanelActions>
       <div className="flex-1 min-h-0 bg-surface">
         <Editor
           height="100%"
@@ -62,6 +63,6 @@ export function JsonPanel() {
           }}
         />
       </div>
-    </div>
+    </Panel>
   );
 }

@@ -13,7 +13,7 @@ import {
   setBackdrop,
   updateImageLayer,
 } from "../core/actions.js";
-import { panel, scroll } from "../ui.js";
+import { Panel, PanelScroll } from "../ui/editor/panel.js";
 import { Field, FieldInput, FieldSelect } from "../ui/editor/field.js";
 import { SectionTitle } from "../ui/editor/section-title.js";
 import { ToolbarButton } from "../ui/editor/toolbar-button.js";
@@ -55,8 +55,8 @@ export function RoomPanel() {
   const worldH = doc.rows * doc.gridSize;
 
   return (
-    <div className={panel}>
-      <div className={scroll}>
+    <Panel>
+      <PanelScroll>
         <SectionTitle>Room</SectionTitle>
         <div className="py-[3px] px-3.5">
           <Field label="Name">
@@ -145,8 +145,8 @@ export function RoomPanel() {
             </ToolbarButton>
           )}
         </div>
-      </div>
-    </div>
+      </PanelScroll>
+    </Panel>
   );
 }
 
