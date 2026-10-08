@@ -13,6 +13,7 @@ import {
   mergeImportedAsset,
   normalizeRelativePath,
   PathTraversalError,
+  saveProject,
 } from "../../src/project-io/index.js";
 import { createMemoryFileSystem } from "./memfs.js";
 
@@ -186,4 +187,54 @@ test("create and load round-trip preserves portable paths", async () => {
   if (!loaded.ok) return;
   assert.equal(loaded.value.manifest.id, "demo.project");
   assert.equal(loaded.value.levels[0]?.path, "levels/level.main.json");
+});
+
+test("player.loadout round-trips through save, and new projects omit it (default X)", async () => {
+  const fs = createMemoryFileSystem();
+  const created = await createProject(fs, { id: "loadout.project", name: "Loadout" });
+  assert.equal(created.ok, true);
+  if (!created.ok) return;
+  assert.equal(created.value.manifest.player, undefined);
+  assert.ok(!(await fs.readText("project.json")).includes("player"));
+
+  const zero = {
+    ...created.value,
+    manifest: { ...created.value.manifest, player: { loadout: "player.zero" } },
+  };
+  assert.equal((await saveProject(fs, zero)).ok, true);
+
+  const loaded = await loadProject(fs);
+  assert.equal(loaded.ok, true);
+  if (!loaded.ok) return;
+  assert.deepEqual(loaded.value.manifest.player, { loadout: "player.zero" });
+
+  const destFs = createMemoryFileSystem();
+  assert.equal((await exportProject(fs, destFs, loaded.value)).ok, true);
+  assert.deepEqual(JSON.parse(await destFs.readText("project.json")).player, {
+    loadout: "player.zero",
+  });
+});
+
+test("an unknown player.loadout is reported at /player/loadout on load and save", async () => {
+  const fs = createMemoryFileSystem();
+  const created = await createProject(fs, { id: "loadout.project", name: "Loadout" });
+  assert.equal(created.ok, true);
+  if (!created.ok) return;
+  const bad = {
+    ...created.value,
+    manifest: { ...created.value.manifest, player: { loadout: "player.nobody" } },
+  };
+
+  const saved = await saveProject(fs, bad);
+  assert.equal(saved.ok, false);
+  assert.ok(
+    saved.issues.some((i) => i.code === "reference.invalid" && i.path === "/player/loadout"),
+  );
+
+  await fs.writeText("project.json", serializeProject(bad.manifest));
+  const loaded = await loadProject(fs);
+  assert.equal(loaded.ok, false);
+  assert.ok(
+    loaded.issues.some((i) => i.code === "reference.invalid" && i.path === "/player/loadout"),
+  );
 });

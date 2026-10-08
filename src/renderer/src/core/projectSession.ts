@@ -1,6 +1,6 @@
 import { validateProject, type ValidationIssue } from "@mmx/project-schema";
 import type { StudioProject, ProjectIssue } from "@mmx/project-io";
-import { updateLevelDocument } from "@mmx/project-io";
+import { PROJECT_VALIDATION, updateLevelDocument } from "@mmx/project-io";
 import {
   buildStudioAssets,
   starterAssets,
@@ -13,6 +13,8 @@ export type ProjectSessionState = {
   rootPath: string | null;
   project: StudioProject | null;
   issues: ProjectIssue[];
+  /** Manifest edits (outside the level document) not yet saved. */
+  dirty?: boolean;
 };
 
 const EMPTY: ProjectSessionState = {
@@ -32,7 +34,7 @@ function mapSchemaIssues(issues: ValidationIssue[]): ProjectIssue[] {
 }
 
 function validateOpenProject(project: StudioProject): ProjectIssue[] {
-  return mapSchemaIssues(validateProject(project.manifest).issues);
+  return mapSchemaIssues(validateProject(project.manifest, PROJECT_VALIDATION).issues);
 }
 
 const isPlayAssetIssue = (issue: ProjectIssue): boolean => issue.code.startsWith("play-assets.");
@@ -124,6 +126,19 @@ export class ProjectSession {
     this.setState({
       ...this.state,
       project: nextProject,
+      issues: [...validateOpenProject(nextProject), ...this.state.issues.filter(isPlayAssetIssue)],
+    });
+  }
+
+  /** Set `player.loadout` in the open project's manifest; saved with the project. */
+  setPlayerLoadout(loadout: string): void {
+    const project = this.state.project;
+    if (!project || project.manifest.player?.loadout === loadout) return;
+    const nextProject = { ...project, manifest: { ...project.manifest, player: { loadout } } };
+    this.setState({
+      ...this.state,
+      project: nextProject,
+      dirty: true,
       issues: [...validateOpenProject(nextProject), ...this.state.issues.filter(isPlayAssetIssue)],
     });
   }
@@ -232,6 +247,7 @@ export class ProjectSession {
     this.setState({
       ...this.state,
       project: result.value.project,
+      dirty: false,
       issues: [...result.issues, ...validateOpenProject(result.value.project)],
     });
     return this.state.issues;

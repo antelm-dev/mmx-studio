@@ -197,6 +197,7 @@ write("project.json", {
   compatibleRuntime: { min: "1.0.0" },
   entryLevelId: "level.intro-highway",
   levels: [{ id: "level.intro-highway", path: "levels/level.intro-highway.json" }],
+  player: { loadout: "player.zero" },
   assets: [
     {
       id: "anim.player.zero",

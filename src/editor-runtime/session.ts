@@ -49,6 +49,7 @@ class PlaytestSession implements EditorPlaytestSession {
     const runtime = createToolingRuntime({
       scene: {
         seed: this.options.seed,
+        loadoutId: this.options.loadoutId,
         level: documentToLevelData(this.document),
       },
       audio,
@@ -141,6 +142,10 @@ class PlaytestSession implements EditorPlaytestSession {
 
   get isPaused(): boolean {
     return this.runtime?.isPaused ?? false;
+  }
+
+  get playerMoveset(): readonly string[] {
+    return this.runtime?.session.scene.player.moveset.map((ability) => ability.name) ?? [];
   }
 
   setCheckpoint(): void {

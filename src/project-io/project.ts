@@ -7,10 +7,15 @@ import {
   type ProjectDocument,
   type ProjectAsset,
 } from "@mmx/project-schema";
+import { COMPILED_GAME_DATA } from "@mmx/engine/data";
 
 import type { FileSystem } from "./fs.js";
 import { levelManifestPath, PROJECT_MANIFEST } from "./paths.js";
 import { fail, issue, succeed, type ProjectResult, type StudioProject } from "./model.js";
+
+/** Compiled player loadout ids a project's `player.loadout` may reference (default `player.x`). */
+export const LOADOUT_IDS: readonly string[] = [...COMPILED_GAME_DATA.loadouts.keys()];
+export const PROJECT_VALIDATION = { loadoutIds: LOADOUT_IDS };
 
 export type CreateProjectInput = {
   id: string;
@@ -86,7 +91,7 @@ export async function loadProject(fs: FileSystem): Promise<ProjectResult<StudioP
     ]);
   }
 
-  const parsed = parseProject(raw);
+  const parsed = parseProject(raw, PROJECT_VALIDATION);
   if (!parsed.ok || !parsed.project) {
     return fail(
       parsed.issues.map((entry) => ({
@@ -151,7 +156,7 @@ export async function saveProject(
   fs: FileSystem,
   project: StudioProject,
 ): Promise<ProjectResult<StudioProject>> {
-  const validation = validateProject(project.manifest);
+  const validation = validateProject(project.manifest, PROJECT_VALIDATION);
   if (!validation.ok) {
     return fail(
       validation.issues.map((entry) => ({

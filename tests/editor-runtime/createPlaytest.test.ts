@@ -102,3 +102,18 @@ test("debug controller fields surface through playtest snapshot", async () => {
 
   session.dispose();
 });
+
+test("loadoutId picks the running player's loadout", async () => {
+  const x = createPlaytest(createLevelDocument());
+  const zero = createPlaytest(createLevelDocument(), { loadoutId: "player.zero" });
+  await x.start();
+  await zero.start();
+
+  assert.ok(x.playerMoveset.includes("Shot"));
+  assert.ok(zero.playerMoveset.includes("Dash"));
+  assert.ok(!zero.playerMoveset.includes("Shot"));
+
+  x.dispose();
+  zero.dispose();
+  assert.deepEqual(zero.playerMoveset, []);
+});
