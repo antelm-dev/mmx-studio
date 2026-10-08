@@ -180,6 +180,7 @@ export class EditorViewport {
   }
 
   destroy(): void {
+    if (this.destroyed) return;
     this.destroyed = true;
     this.resizeObserver?.disconnect();
     this.interaction.destroy();
