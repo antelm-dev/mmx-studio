@@ -100,7 +100,7 @@ export function ProblemsPanel({ api }: { api?: DockviewPanelApi }): ReactElement
     <Panel>
       <PanelScroll>
         {issues.length === 0 ? (
-          <PanelNote color="#7f91aa">
+          <PanelNote color="studio.fgTertiary">
             <Dot bg="studio.success" mr="7px" /> No problems detected. Ready to play.
           </PanelNote>
         ) : (

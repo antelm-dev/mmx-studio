@@ -124,7 +124,7 @@ export function RoomPanel() {
           textStyle="xs"
         >
           <chakra.span color="studio.muted">World size</chakra.span>
-          <chakra.span fontFamily="mono" color="#e6ebf5">
+          <chakra.span fontFamily="mono" color="studio.fg">
             {worldW} × {worldH} px
           </chakra.span>
         </chakra.div>
