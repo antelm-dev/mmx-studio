@@ -35,11 +35,27 @@ test("engine diagnostics map entityId → objectId and field → field", () => {
   assert.equal(issue?.severity, "error");
 });
 
-test("engine warnings do not block Play, engine errors do", () => {
-  const outside = validateLevelDocument(docWith([platform({ x: 100000 })]));
-  assert.equal(outside.ok, true);
-  assert.ok(outside.issues.some((i) => i.severity === "warning" && i.code === "bounds"));
+test("an object wholly outside the level is an out-of-bounds error, reported once", () => {
+  const doc = createLevelDocument();
+  const enemy: LevelObjectInstance = {
+    id: "metool-1",
+    definitionId: "enemy.metool",
+    x: doc.cols * doc.gridSize + 200,
+    y: 32,
+  };
+  const outside = validateLevelDocument(docWith([enemy]));
+  assert.equal(outside.ok, false);
+  const forEnemy = outside.issues.filter((i) => i.objectId === "metool-1");
+  assert.deepEqual(
+    forEnemy.map((i) => [i.severity, i.code]),
+    [["error", "object.out-of-bounds"]],
+  );
 
+  const inside = validateLevelDocument(docWith([{ ...enemy, x: 64 }]));
+  assert.equal(inside.ok, true);
+});
+
+test("engine errors block Play", () => {
   const bad = validateLevelDocument(docWith([platform({ overrides: { Speed: -5 } })]));
   assert.equal(bad.ok, false);
   assert.ok(bad.errorCount >= 1);

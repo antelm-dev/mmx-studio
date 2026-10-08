@@ -68,7 +68,12 @@ export function ProblemsPanel({ api }: { api?: DockviewPanelApi }): ReactElement
   const snap = useEditorSnapshot();
   const project = useProjectSession();
   const validation = snap.validation;
-  const issues = toProblemRows(validation.issues, project.issues);
+  // A stable `data` reference: TanStack resets the page index (a setState) whenever `data`
+  // changes, so a fresh array per render re-renders forever once Problems is non-empty.
+  const issues = useMemo(
+    () => toProblemRows(validation.issues, project.issues),
+    [validation.issues, project.issues],
+  );
   const errorCount =
     validation.errorCount + project.issues.filter((issue) => issue.severity === "error").length;
   const warningCount =
