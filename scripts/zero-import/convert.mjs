@@ -85,3 +85,19 @@ export function cellSize(frames) {
 export function placeInCell([, , w, , ax, ay], cell) {
   return { dx: cell.w / 2 - (w - ax), dy: cell.h / 2 + FEET_BELOW_CENTRE - ay };
 }
+
+/**
+ * The Intro Highway art as level image layers. `stage.png` is the foreground painting,
+ * world-locked; `background.png` scrolls at half speed (MMX1 shifts it by camX / 2, and
+ * its y stays 0 on the highway). `backdrop` is palette colour 0 as [r, g, b].
+ */
+export function introHighwayArt(backdrop) {
+  const hex = backdrop.map((c) => c.toString(16).padStart(2, "0")).join("");
+  return {
+    imageLayers: [
+      { id: "art-background", assetId: "image.background", x: 0, y: 0, parallax: 0.5, layer: "background" },
+      { id: "art-stage", assetId: "image.stage", x: 0, y: 0, parallax: 1, layer: "world-back" },
+    ],
+    backdrop: `#${hex}`,
+  };
+}

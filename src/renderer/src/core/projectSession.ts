@@ -143,6 +143,31 @@ export class ProjectSession {
     });
   }
 
+  /**
+   * Pick a PNG, copy it into the project as an `image` asset and reload the
+   * assets. Returns the new asset id, or null when cancelled; throws when the
+   * import fails. The manifest change is saved with the project.
+   */
+  async importImage(): Promise<string | null> {
+    const bridge = window.studio?.project;
+    const { rootPath, project } = this.state;
+    if (!bridge || !rootPath || !project) return null;
+    const file = await bridge.pickImportFile([{ name: "PNG image", extensions: ["png"] }]);
+    if (!file) return null;
+    const result = await bridge.importAsset(rootPath, project, {
+      sourcePath: file.path,
+      kind: "image",
+    });
+    if (!result.ok) throw new Error(result.issues[0]?.message ?? "Import failed.");
+    this.switchProject({
+      ...this.state,
+      project: result.value.project,
+      dirty: true,
+      issues: [...validateOpenProject(result.value.project), ...this.state.issues.filter(isPlayAssetIssue)],
+    });
+    return result.value.assetId;
+  }
+
   async createProject(): Promise<ProjectIssue[]> {
     const bridge = window.studio?.project;
     if (!bridge) {

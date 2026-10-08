@@ -25,7 +25,7 @@ a dependency: PNG read/write uses `node:zlib`.
 | File | Shape |
 | --- | --- |
 | `stage.json` | `cell` (16), `w`/`h` in cells (512x64), `collision[h][w]` bytes, `spawn [x, y]` px from checkpoint 0, `cameras[]` (checkpoint camera limits), `backdrop [r, g, b]` |
-| `stage.png`, `background.png` | Intro Highway art, colour 0 transparent. Not used yet (no image layers in Studio) |
+| `stage.png` (8192x1024), `background.png` (4096x1024) | Intro Highway art, colour 0 transparent |
 | `zero.json` | `{ "<anim>": { frames: [[x, y, w, h, anchorX, anchorY], ...], scripts: [[[frame, duration], ...], ...] } }`; frames index `zero.png`, the anchor is Zero's feet |
 | `zero.png` | Packed atlas, frames face **left** (`sprite_faces` in the sheet) |
 | `../sheets/zero_moves.json` | `moves[]`: `{ move, anim, script }` rows, plus physics/attack guesses (unused here) |
@@ -38,7 +38,8 @@ back to step `<frame>`; `0xff` ends it and holds the last step.
 ```text
 project.json                         manifest: player.loadout "player.zero", anim.player.zero + sprite.player.zero + borrowed assets
 game/data.json                       bindings: playerAnimation + borrowed fontUi/sounds/shotAnimations/hudSprites
-levels/level.intro-highway.json      schemaVersion 2 level document
+levels/level.intro-highway.json      schemaVersion 2 level document, with imageLayers + backdrop
+assets/images/{stage,background}.png the cache's art, copied as-is (image.stage, image.background)
 assets/sprites/player/zero.png       repacked sheet
 assets/sprites/player/zero_anims.json  { animations } (same clips as in project.json)
 assets/{sprites/hud,sprites/effects,sounds,fonts}/...  copied from templates/mmx-demo
@@ -102,8 +103,17 @@ The slopes are 4-tile ramps rising 16 px (read from where the bytes sit in the g
 one-way tile, so walkable tops are solid. One `spawn` object sits at checkpoint 0's
 spawn `(128, 256)`; the Intro drops the player onto the road at y = 384.
 
-Not converted yet: stage art, the checkpoint camera limits (`cameras`) and backdrop
-colour, enemies.
+The art becomes two `imageLayers`, both at (0, 0), plus the level `backdrop`:
+
+| Layer id | Asset | `layer` | `parallax` | Why |
+| --- | --- | --- | --- | --- |
+| `art-background` | `image.background` | `background` | 0.5 | MMX1 scrolls it at camX / 2; its y stays 0 on the highway |
+| `art-stage` | `image.stage` | `world-back` | 1 | the foreground painting, locked to the tiles |
+
+`backdrop` is palette colour 0 (`stage.json` `backdrop`) as `#rrggbb`; it fills
+whatever both images leave transparent.
+
+Not converted yet: the checkpoint camera limits (`cameras`), enemies.
 
 ### Bindings
 

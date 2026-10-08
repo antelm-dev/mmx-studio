@@ -35,6 +35,18 @@ sounds from its `project.json` assets and `game/data.json` bindings
 the renderer). Invalid bindings show as `play-assets.*` warnings in Problems.
 With no project open, the bundled `templates/mmx-starter` assets are used.
 
+## Image layers
+
+Room panel → **Image layers** → **Add image layer…** picks a PNG, copies it into
+the project as a `kind: "image"` asset (`project:import-asset`, id `image.<name>`,
+renamed on collision) and adds a level image layer for it. The import only
+changes the manifest in memory: the project is marked dirty and written on
+Save. Each layer's draw `layer`, `parallax`, `x`/`y` and list order, and the
+level `backdrop` colour, are edited there as undoable commands; `imageLayer.*`
+and `backdrop.*` issues show in Problems. The viewport draws the layers through
+renderer-pixi's `DecorationView` at camera 0 (no parallax); Play applies
+parallax like the game.
+
 ## Fixture
 
 `tests/project-io/fixtures/minimal-project/` is a small portable project

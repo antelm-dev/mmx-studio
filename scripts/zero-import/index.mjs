@@ -5,7 +5,7 @@ import { cpSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { crc32, deflateSync, inflateSync } from "node:zlib";
 
-import { cellSize, placeInCell, tileOf, toClip } from "./convert.mjs";
+import { cellSize, introHighwayArt, placeInCell, tileOf, toClip } from "./convert.mjs";
 
 const [cacheArg, outArg] = process.argv.slice(2);
 if (!cacheArg || !outArg) {
@@ -167,6 +167,13 @@ write("levels/level.intro-highway.json", {
   slopes,
   objects: [{ id: "spawn-checkpoint-0", definitionId: "spawn", x: stage.spawn[0], y: stage.spawn[1] }],
   decorations: [],
+  ...introHighwayArt(stage.backdrop),
+});
+// The art PNGs are used as-is (colour 0 is already transparent).
+const artAssets = ["stage", "background"].map((name) => {
+  const path = `assets/images/${name}.png`;
+  write(path, readFileSync(join(cache, `${name}.png`)));
+  return { id: `image.${name}`, kind: "image", path };
 });
 
 // --- Borrowed from templates/mmx-demo: the HUD, shot/effect animations, gameplay sounds and
@@ -207,6 +214,7 @@ write("project.json", {
       animations,
     },
     { id: "sprite.player.zero", kind: "sprite", path: "assets/sprites/player/zero.png" },
+    ...artAssets,
     ...borrowedAssets,
   ],
 });

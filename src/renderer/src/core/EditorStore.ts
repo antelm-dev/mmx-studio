@@ -364,9 +364,11 @@ export class EditorStore {
 
   // --- Derived ---
 
-  validate(): ValidationResult {
+  /** `imageAssetIds`: the open project's `image` assets, so image layers are cross-checked. */
+  validate(imageAssetIds?: readonly string[]): ValidationResult {
     return validateLevelDocument(this.state.document, {
       knownDecorationAssetIds: knownDecorationAssetIds(),
+      imageAssetIds,
     });
   }
 

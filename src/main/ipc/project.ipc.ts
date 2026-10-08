@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import { basename, extname } from "node:path";
 import { dialog } from "electron";
 import { defineIpcModule, handle } from "electron-ipc-module";
@@ -35,6 +36,9 @@ function errorMessage(error: unknown): string {
 }
 
 export function createProjectIpc() {
+  // Only a file the user just picked may be copied in from outside the project.
+  let pickedImportPath: string | null = null;
+
   return defineIpcModule("project", {
     "pick-directory": handle(async (_event, title: string): Promise<string | null> => {
       const result = await dialog.showOpenDialog({
@@ -66,6 +70,7 @@ export function createProjectIpc() {
         });
         if (result.canceled || result.filePaths.length === 0) return null;
         const path = result.filePaths[0]!;
+        pickedImportPath = path;
         return { path, name: basename(path) };
       },
     ),
@@ -194,6 +199,10 @@ export function createProjectIpc() {
       },
     ),
 
+    /**
+     * Copies a file into the project and returns the manifest with the new asset.
+     * Nothing else is written: the renderer marks the project dirty and the user saves.
+     */
     "import-asset": handle(
       async (
         _event,
@@ -201,11 +210,22 @@ export function createProjectIpc() {
         project: StudioProject,
         input: { sourcePath: string; kind: AssetKind; logicalId?: string },
       ): Promise<ProjectResult<{ project: StudioProject; assetId: string; copiedTo: string }>> => {
-        const fs = createNodeFileSystem(rootPath);
+        if (input.sourcePath !== pickedImportPath) {
+          return {
+            ok: false,
+            issues: [issue("asset.source", "Pick the file to import first.", "/sourcePath")],
+          };
+        }
+        const projectFs = createNodeFileSystem(rootPath);
+        // The project fs is root-scoped; the picked source is outside it, so read it directly.
+        const fs = {
+          ...projectFs,
+          copyFile: async (from: string, to: string) => projectFs.writeBytes(to, await readFile(from)),
+        };
         const imported = await importAsset(fs, project.manifest.assets, {
           sourcePath: input.sourcePath,
           kind: input.kind,
-          collision: "reject",
+          collision: "rename",
           logicalId: input.logicalId,
         });
         if (!imported.ok) return { ok: false, issues: imported.issues };
@@ -227,20 +247,14 @@ export function createProjectIpc() {
           };
         }
 
-        const nextProject: StudioProject = {
-          ...project,
-          manifest: { ...project.manifest, assets },
-        };
-        const saved = await saveProject(fs, nextProject);
-        if (!saved.ok) return { ok: false, issues: saved.issues };
         return {
           ok: true,
           value: {
-            project: saved.value,
+            project: { ...project, manifest: { ...project.manifest, assets } },
             assetId: imported.value.asset.id,
             copiedTo: imported.value.copiedTo,
           },
-          issues: saved.issues,
+          issues: imported.issues,
         };
       },
     ),

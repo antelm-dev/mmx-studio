@@ -8,6 +8,7 @@ import {
   type SlopeMap,
 } from "@mmx/content-schema";
 import {
+  DecorationView,
   decorationBounds,
   getDecorationAsset,
   getSpritePreview,
@@ -84,6 +85,8 @@ export class EditorViewportRenderer {
   private readonly objectLayer = new Container();
   private readonly decorationFrontLayer = new Container();
   private readonly overlay = new Graphics();
+  /** The game's image-layer + backdrop view, drawn at camera 0 (no parallax) like catalog decorations. */
+  private readonly art = new DecorationView();
 
   private terrainTilesRef: readonly TerrainTile[] | null = null;
   private terrainSlopesRef: SlopeMap | undefined | null = null;
@@ -104,19 +107,26 @@ export class EditorViewportRenderer {
       fill: 0xdfe7f5,
     });
     this.world.addChild(
+      this.art.farBackground,
+      this.art.background,
+      this.art.worldBack,
       this.terrainLayer,
       this.gridLayer,
       this.decorationBackLayer,
       this.objectLayer,
       this.decorationFrontLayer,
+      this.art.worldFront,
+      this.art.foreground,
       this.overlay,
     );
-    this.app.stage.addChild(this.world);
+    this.app.stage.addChild(this.art.backdrop, this.world);
   }
 
   /** Swap the sprite source (the open project's catalog, or the starter fallback). */
   setAssets(assets: AssetCatalog): void {
     this.assets = assets;
+    // Image layers built before their sheet loaded were skipped; rebuild against the new sheets.
+    this.art.clear();
   }
 
 
@@ -142,6 +152,7 @@ export class EditorViewportRenderer {
       this.rebuildTerrain();
     }
     this.drawGrid();
+    this.drawImageLayers();
     this.drawDecorations(live);
     this.drawObjects(live);
     this.drawOverlay(live, tileStroke, marquee, pointerWorld);
@@ -191,6 +202,32 @@ export class EditorViewportRenderer {
     for (let y = 0; y <= doc.rows; y++) g.moveTo(0, y * TS).lineTo(worldW, y * TS);
     g.stroke({ width, color: COLOR_GRID });
     g.rect(0, 0, worldW, worldH).stroke({ width: width * 1.5, color: 0x2a3345 });
+  }
+
+  private drawImageLayers(): void {
+    const { document: doc, decorationLayerVisible: vis } = this.store.get();
+    // Rebuilds only when the layers change (DecorationView keys on a signature).
+    // An invalid colour (hand-edited JSON) is a Problems error; Pixi would throw on it.
+    const backdrop = /^#[0-9a-f]{6}$/i.test(doc.backdrop ?? "") ? doc.backdrop : undefined;
+    const imageLayers = Array.isArray(doc.imageLayers) ? doc.imageLayers : undefined;
+    this.art.setDecorations([], { imageLayers, backdrop });
+    this.art.backdrop.width = this.app.screen.width;
+    this.art.backdrop.height = this.app.screen.height;
+    this.art.farBackground.visible = vis["far-background"];
+    this.art.background.visible = vis.background;
+    this.art.worldBack.visible = vis["world-back"];
+    this.art.worldFront.visible = vis["world-front"];
+    this.art.foreground.visible = vis.foreground;
+    // Lets e2e tests count the image-layer sprites the viewport actually drew.
+    (this.app.canvas as HTMLCanvasElement).dataset.imageLayerSprites = String(
+      [
+        this.art.farBackground,
+        this.art.background,
+        this.art.worldBack,
+        this.art.worldFront,
+        this.art.foreground,
+      ].reduce((n, c) => n + c.children.length, 0),
+    );
   }
 
   private decorationDrawPos(

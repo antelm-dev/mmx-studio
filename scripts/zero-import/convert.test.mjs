@@ -2,11 +2,21 @@ import { existsSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 
 import { GAMEPLAY_SOUND_IDS } from "@mmx/browser-audio";
+import { validateImageLayers } from "@mmx/content-schema";
 import { describe, expect, it } from "vitest";
 
 import { loadProject } from "../../src/project-io/index.ts";
 import { createNodeFileSystem } from "../../src/project-io/node.ts";
-import { cellSize, FEET_BELOW_CENTRE, placeInCell, splitScript, tileOf, Tile, toClip } from "./convert.mjs";
+import {
+  cellSize,
+  FEET_BELOW_CENTRE,
+  introHighwayArt,
+  placeInCell,
+  splitScript,
+  tileOf,
+  Tile,
+  toClip,
+} from "./convert.mjs";
 
 describe("zero-import conversions", () => {
   const region = (f) => [f * 10, 0, 10, 10];
@@ -66,6 +76,18 @@ describe("zero-import conversions", () => {
   });
 });
 
+describe("zero-import level art", () => {
+  it("puts the stage world-locked and the background at half speed over the backdrop", () => {
+    expect(introHighwayArt([80, 56, 8])).toEqual({
+      imageLayers: [
+        { id: "art-background", assetId: "image.background", x: 0, y: 0, parallax: 0.5, layer: "background" },
+        { id: "art-stage", assetId: "image.stage", x: 0, y: 0, parallax: 1, layer: "world-back" },
+      ],
+      backdrop: "#503808",
+    });
+  });
+});
+
 // The generated project lives outside the repo (Capcom-derived); check it when present.
 const generated = resolve(__dirname, "../../../zero-x-mashup/project");
 describe.skipIf(!existsSync(generated))("generated zero project", () => {
@@ -73,6 +95,17 @@ describe.skipIf(!existsSync(generated))("generated zero project", () => {
     const result = await loadProject(createNodeFileSystem(generated));
     expect(result.ok ? [] : result.issues).toEqual([]);
     expect(result.ok && result.value.manifest.player).toEqual({ loadout: "player.zero" });
+  });
+
+  it("draws the stage art from image assets that exist on disk", () => {
+    const read = (rel) => JSON.parse(readFileSync(join(generated, rel), "utf8"));
+    const level = read("levels/level.intro-highway.json");
+    const images = new Map(
+      read("project.json").assets.filter((a) => a.kind === "image").map((a) => [a.id, a.path]),
+    );
+    expect(validateImageLayers(level, [...images.keys()])).toEqual([]);
+    expect(level.imageLayers.map((l) => l.assetId)).toEqual(["image.background", "image.stage"]);
+    for (const l of level.imageLayers) expect(existsSync(join(generated, images.get(l.assetId)))).toBe(true);
   });
 
   // Mirrors what mmx-core-ts build-tools/src/studioBindings.ts requires of the browser build.

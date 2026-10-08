@@ -13,6 +13,7 @@ import {
   EditorStore,
 } from "../core/EditorStore.js";
 import {
+  addImageLayer,
   deleteSelection,
   duplicateSelection,
   nudgeSelection,
@@ -69,6 +70,7 @@ export class EditorController {
   private readonly listeners = new Set<() => void>();
 
   private readonly playtest: EditorPlaytestController;
+  private imageKey: string | undefined;
 
   constructor() {
     this.playtest = new EditorPlaytestController(this.store, {
@@ -76,7 +78,7 @@ export class EditorController {
       getFileAccess: () => this.fileAccess,
       getAssets: () => projectSession.getAssets(),
       getLoadoutId: () => projectSession.getSnapshot().project?.manifest.player?.loadout,
-      validate: () => this.store.validate(),
+      validate: () => this.store.validate(this.imageAssetIds()),
       toast: (msg) => this.toast(msg),
       focusObject: (id) => this.focusObject(id),
       onModeChange: (mode) => {
@@ -101,6 +103,14 @@ export class EditorController {
     this.store.subscribe((_, reason) => this.onStoreChange(reason));
     // Manifest edits (e.g. the player loadout) live in the project session, not the store.
     projectSession.subscribe(() => {
+      // Image layers are validated against the manifest's image assets; recheck when they change.
+      const imageKey = this.imageAssetIds()?.join(",");
+      if (imageKey !== this.imageKey) {
+        this.imageKey = imageKey;
+        this.snapshot = this.build("ui");
+        this.emit();
+        return;
+      }
       if (this.snapshot.dirty === this.isDirty) return;
       this.snapshot = { ...this.snapshot, dirty: this.isDirty };
       this.emit();
@@ -122,6 +132,14 @@ export class EditorController {
   subscribePlaytest = (fn: () => void): (() => void) => this.playtest.subscribe(fn);
   getPlaytestSnapshot = (): PlaytestSnapshot => this.playtest.getSnapshot();
 
+  /** The open project's `image` asset ids; undefined without a project (no cross-check). */
+  private imageAssetIds(): string[] | undefined {
+    return projectSession
+      .getSnapshot()
+      .project?.manifest.assets.filter((asset) => asset.kind === "image")
+      .map((asset) => asset.id);
+  }
+
   private get isDirty(): boolean {
     return this.store.isDirty || projectSession.getSnapshot().dirty === true;
   }
@@ -138,7 +156,7 @@ export class EditorController {
       canUndo: keepDerived ? prev.canUndo : this.store.canUndo,
       canRedo: keepDerived ? prev.canRedo : this.store.canRedo,
       dirty: keepDerived ? prev.dirty : this.isDirty,
-      validation: keepDerived ? prev.validation : this.store.validate(),
+      validation: keepDerived ? prev.validation : this.store.validate(this.imageAssetIds()),
       levelTitle: this.computeTitle(),
     };
   }
@@ -176,6 +194,22 @@ export class EditorController {
       await this.viewport?.setAssets(assets.catalog);
     } catch (error) {
       this.toast(`Could not load sprites: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  /** Import a PNG into the open project and add an image layer that shows it. */
+  async importImageLayer(): Promise<void> {
+    if (!projectSession.getSnapshot().open) {
+      this.toast("Open a project before importing an image.");
+      return;
+    }
+    try {
+      const assetId = await projectSession.importImage();
+      if (!assetId) return;
+      await this.applyProjectAssets();
+      addImageLayer(this.store, assetId);
+    } catch (error) {
+      this.toast(`Import failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
