@@ -368,13 +368,13 @@ export function Inspector() {
             <SectionTitle divider>Terrain</SectionTitle>
             <KeyValue>
               <chakra.span color="studio.muted">Index</chakra.span>
-              <chakra.span fontFamily="mono" color="#e6ebf5">
+              <chakra.span fontFamily="mono" color="studio.fg">
                 {singleTile.index}
               </chakra.span>
             </KeyValue>
             <KeyValue>
               <chakra.span color="studio.muted">Kind</chakra.span>
-              <chakra.span fontFamily="mono" color="#e6ebf5">
+              <chakra.span fontFamily="mono" color="studio.fg">
                 {tileKindLabel(singleTile.value)}
               </chakra.span>
             </KeyValue>

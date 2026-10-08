@@ -36,8 +36,8 @@ export function SpritePreview({
     const scale = Math.min(size / rw, size / rh);
     return (
       <chakra.span
-        display="grid"
-        placeItems="center"
+        display="block"
+        position="relative"
         flex="none"
         overflow="hidden"
         rounded="md"
@@ -46,12 +46,12 @@ export function SpritePreview({
         style={{ width: size, height: size, transform: flip ? "scaleX(-1)" : undefined }}
         title={assetId ?? definitionId}
       >
+        {/* Centred by offset, not grid: a grid track grows to the unscaled region, pushing a region larger than `size` out of the box. */}
         <chakra.span
-          position="relative"
+          position="absolute"
           overflow="hidden"
-          flex="none"
           imageRendering="pixelated"
-          style={{ width: rw, height: rh, transform: `scale(${scale})` }}
+          style={{ left: (size - rw) / 2, top: (size - rh) / 2, width: rw, height: rh, transform: `scale(${scale})` }}
         >
           <chakra.img
             position="absolute"

@@ -2,7 +2,11 @@ import { Box, Menu, Portal } from "@chakra-ui/react";
 import { Check } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
 
-export const MenuRoot = Menu.Root;
+/** Escape closes the menu only; it must not reach the editor's window shortcuts (exit Play, clear selection). */
+export function MenuRoot(props: ComponentProps<typeof Menu.Root>) {
+  return <Menu.Root onEscapeKeyDown={(e) => e.stopPropagation()} {...props} />;
+}
+
 export const MenuTrigger = Menu.Trigger;
 
 /** Popover surface portalled to `body` so Dockview never clips it. */

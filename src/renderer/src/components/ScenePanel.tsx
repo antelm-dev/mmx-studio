@@ -97,8 +97,6 @@ function SceneRowMenu({
     <MenuRoot
       lazyMount
       unmountOnExit
-      // Escape belongs to the menu, not the editor (which would also clear the selection).
-      onEscapeKeyDown={(e) => e.stopPropagation()}
       onOpenChange={({ open }) => {
         if (open) {
           const ids = selectedObjectIds(editor.store.get().selection);
