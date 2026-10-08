@@ -83,6 +83,17 @@ pnpm run pack:dir    # electron-builder: unpacked app in dist/ (fast smoke test)
 pnpm dist            # electron-builder: platform installer(s) in dist/
 ```
 
+### Visual baselines
+
+`e2e/visual.spec.ts` compares screenshots of the main editor states, in the dark
+and the light theme, against the PNGs in `e2e/visual.spec.ts-snapshots/`. They are
+Windows baselines (`-win32` suffix), taken at a 1280×800 window. After an intended
+visual change, regenerate them, look at every changed PNG, and commit them:
+
+```bash
+pnpm build && pnpm e2e --update-snapshots
+```
+
 ## Layout
 
 | Region          | Contents                                                                                 |
