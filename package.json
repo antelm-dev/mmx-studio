@@ -14,7 +14,8 @@
     "build:main": "rollup -c --environment NODE_ENV:production",
     "pack:dir": "pnpm build && electron-builder --dir",
     "dist": "pnpm build && electron-builder",
-    "typecheck": "pnpm gen:ipc && tsc -p tsconfig.json --noEmit && tsc -p tsconfig.node.json --noEmit && tsc -p tsconfig.libs.json --noEmit",
+    "chakra:typegen": "chakra typegen src/renderer/src/ui/system.ts",
+    "typecheck": "pnpm gen:ipc && pnpm chakra:typegen && tsc -p tsconfig.json --noEmit && tsc -p tsconfig.node.json --noEmit && tsc -p tsconfig.libs.json --noEmit",
     "test": "pnpm test:unit && pnpm test:libs",
     "test:unit": "vitest run",
     "test:libs": "node --import tsx --test tests/editor-runtime/*.test.ts tests/project-io/*.test.ts tests/starter-template/*.test.ts",
@@ -25,6 +26,8 @@
     "sync:resources": "node scripts/starter-template/sync-resources.mjs"
   },
   "dependencies": {
+    "@chakra-ui/react": "^3.36.1",
+    "@emotion/react": "^11.14.0",
     "@mmx/browser-audio": "file:../mmx-core-ts/packages/browser-audio",
     "@mmx/browser-input": "file:../mmx-core-ts/packages/browser-input",
     "@mmx/client-settings": "file:../mmx-core-ts/packages/client-settings",
@@ -52,6 +55,7 @@
     "zustand": "^5.0.14"
   },
   "devDependencies": {
+    "@chakra-ui/cli": "^3.36.1",
     "@playwright/test": "^1.61.1",
     "@rollup/plugin-alias": "^6.0.0",
     "@rollup/plugin-commonjs": "^28.0.2",
