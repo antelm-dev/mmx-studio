@@ -4,7 +4,7 @@
 
 Finish moving the Studio renderer chrome from Tailwind class strings + Radix primitives to the Chakra v3 system established by milestone 1 (`../chakra-v3-studio-foundation`), then remove Radix, `ui.ts` and Tailwind. Every task is a complete, user-visible slice that preserves behavior, accessible names, keyboard handling, the compact density, the `data-theme` bootstrap and the Dockview/Pixi/Monaco integration.
 
-Source base: the `main` commit that contains Task 02 (Toolbar slice). The coordinator records it as `<source-base>` at launch. Planning ref: `codex/plan-chakra-v3-studio-migration`.
+Source base: the `main` commit that contains Task 02 (Toolbar slice). That is `8421beb` (PR #42). Planning ref: `codex/plan-chakra-v3-studio-migration`.
 
 ## Repository and shared contract
 
@@ -75,7 +75,7 @@ Each worker reports its exact launch base, branch/worktree path, commits, change
 review_contract:
   milestone: chakra-v3-studio-migration
   planning_ref: codex/plan-chakra-v3-studio-migration
-  source_base: "<main tip containing Task 02>"
+  source_base: "8421beb812dc69899bd4ab11298b7fc752674d03"
   default_branch: main
   tasks:
     - id: "03"
