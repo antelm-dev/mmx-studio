@@ -129,6 +129,14 @@ export class EditorViewportRenderer {
     this.art.clear();
   }
 
+  /** Drop every sprite that shows a loaded sheet, before `resetSheetCache()` destroys them. */
+  releaseSheetTextures(): void {
+    this.art.clear();
+    for (const layer of [this.decorationBackLayer, this.objectLayer, this.decorationFrontLayer]) {
+      layer.removeChildren().forEach((c) => c.destroy());
+    }
+  }
+
 
   redraw(
     live: LivePreview,

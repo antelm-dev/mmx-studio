@@ -32,7 +32,7 @@ import {
 } from "../core/persistence.js";
 import { useUiStore } from "../store/uiStore.js";
 import { projectSession } from "../core/projectSession.js";
-import { starterAssets } from "../assets/studioAssets.js";
+import { buildStarterAssets } from "../assets/studioAssets.js";
 import { EditorPlaytestController } from "./EditorPlaytestController.js";
 import { dispatchEditorKey, type KeyboardContext } from "./editorKeyboard.js";
 
@@ -98,6 +98,12 @@ export class EditorController {
       },
       togglePlaytestInspector: () => useUiStore.getState().togglePlaytestInspector(),
     });
+
+    // Opening a project resets the sheet cache: nothing may still draw the old textures.
+    projectSession.beforeSheetReset = () => {
+      if (this.store.get().mode === "play") this.playtest.stopPlay();
+      this.viewport?.releaseSheetTextures();
+    };
 
     this.snapshot = this.build("open");
     this.store.subscribe((_, reason) => this.onStoreChange(reason));
@@ -189,7 +195,8 @@ export class EditorController {
 
   /** Point the viewport at the current project's sprites (starter when none or invalid). */
   private async applyProjectAssets(): Promise<void> {
-    const assets = (await projectSession.getAssets()) ?? starterAssets;
+    // A fresh starter: the bundled one's catalog was loaded before the last sheet reset.
+    const assets = (await projectSession.getAssets()) ?? buildStarterAssets();
     try {
       await this.viewport?.setAssets(assets.catalog);
     } catch (error) {

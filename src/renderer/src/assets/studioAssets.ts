@@ -34,10 +34,9 @@ export type StudioAssets = {
   resolveUrl: (asset: ProjectAsset) => string;
 };
 
-// Inlined as data URLs so they match the data URLs the project bridge returns for the same bytes.
 const bundledAssetUrls = import.meta.glob(
   "../../../../templates/mmx-starter/assets/**/*",
-  { eager: true, query: "?url&inline", import: "default" },
+  { eager: true, query: "?url", import: "default" },
 ) as Record<string, string>;
 
 function resolveStarterAssetUrl(asset: ProjectAsset): string {
@@ -124,9 +123,17 @@ export function buildStudioAssets(
   };
 }
 
-/** Fallback used when no project is open. */
-export const starterAssets = buildStudioAssets(
-  starterProjectJson as ProjectDocument,
-  studioGameDataJson as StudioGameData,
-  resolveStarterAssetUrl,
-);
+/**
+ * Fallback used when no project is open. Build a fresh one after `resetSheetCache()`:
+ * a catalog loads its sheets only once.
+ */
+export function buildStarterAssets(): StudioAssets {
+  return buildStudioAssets(
+    starterProjectJson as ProjectDocument,
+    studioGameDataJson as StudioGameData,
+    resolveStarterAssetUrl,
+  );
+}
+
+/** The starter assets the viewport draws before any project is opened. */
+export const starterAssets = buildStarterAssets();

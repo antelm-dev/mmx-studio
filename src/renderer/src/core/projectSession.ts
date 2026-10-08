@@ -1,7 +1,9 @@
 import { validateProject, type ValidationIssue } from "@mmx/project-schema";
 import type { StudioProject, ProjectIssue } from "@mmx/project-io";
 import { PROJECT_VALIDATION, updateLevelDocument } from "@mmx/project-io";
+import { resetSheetCache } from "@mmx/renderer-pixi";
 import {
+  buildStarterAssets,
   buildStudioAssets,
   starterAssets,
   type StudioAssets,
@@ -43,6 +45,8 @@ export class ProjectSession {
   private state: ProjectSessionState = { ...EMPTY };
   private assets: Promise<StudioAssets | null> = Promise.resolve(starterAssets);
   private readonly listeners = new Set<() => void>();
+  /** Stops Play and drops viewport sprites; runs before old sheet textures are destroyed. */
+  beforeSheetReset: () => void = () => {};
 
   subscribe = (fn: () => void): (() => void) => {
     this.listeners.add(fn);
@@ -63,7 +67,8 @@ export class ProjectSession {
   /** Replace the open project (or close it) and reload its assets. */
   private switchProject(next: ProjectSessionState): void {
     this.setState(next);
-    this.assets = this.loadAssets();
+    // Chained so two quick switches never load sheets concurrently.
+    this.assets = this.assets.catch(() => null).then(() => this.loadAssets());
   }
 
   /**
@@ -78,7 +83,15 @@ export class ProjectSession {
   private async loadAssets(): Promise<StudioAssets | null> {
     const { rootPath, project } = this.state;
     const bridge = window.studio?.project;
-    if (!bridge || !rootPath || !project) return starterAssets;
+
+    // Nothing may draw the previous project's sheets once the reset destroys them.
+    this.beforeSheetReset();
+    await resetSheetCache();
+    if (!bridge || !rootPath || !project) {
+      const assets = buildStarterAssets();
+      await assets.catalog.load();
+      return assets;
+    }
 
     const issues: ProjectIssue[] = [];
     let assets: StudioAssets | null = null;
@@ -92,8 +105,6 @@ export class ProjectSession {
         gameData as StudioGameData,
         (asset) => urls[asset.id] ?? "",
       );
-      // ponytail: renderer-pixi caches sheets by asset id with no reset, so a sheet whose id
-      // is already loaded with different bytes fails here until restart; reset once exposed.
       await assets.catalog.load();
     } catch (error) {
       assets = null;
