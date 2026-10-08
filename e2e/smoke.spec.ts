@@ -27,6 +27,8 @@ function trackRequest(request: Request): void {
   }
 }
 
+let storedTheme: string | null = null;
+
 test.beforeAll(async () => {
   const env = { ...process.env };
   delete env.ELECTRON_RUN_AS_NODE;
@@ -51,9 +53,17 @@ test.beforeAll(async () => {
 
   await page.waitForLoadState("domcontentloaded");
   await expect(page.locator("#viewport-canvas")).toBeVisible({ timeout: 30_000 });
+  storedTheme = await page.evaluate(() => localStorage.getItem("mmx-studio-theme"));
 });
 
 test.afterAll(async () => {
+  // The suite runs on the real profile: put the developer's theme back even if a test failed midway.
+  await page
+    ?.evaluate((v) => {
+      if (v === null) localStorage.removeItem("mmx-studio-theme");
+      else localStorage.setItem("mmx-studio-theme", v);
+    }, storedTheme)
+    .catch(() => {});
   await app?.close();
 });
 
@@ -215,15 +225,17 @@ test("title bar menus work by pointer and keyboard and return focus", async () =
   const initialTheme = await theme();
 
   const viewMenu = page.getByRole("button", { name: "View menu" });
-  const darkTheme = page.getByRole("menuitemcheckbox", { name: /Dark theme/ });
+  const themeItems = page.getByRole("menuitemradio");
+  const checkedTheme = page.getByRole("menuitemradio", { checked: true });
   const zoomIn = page.getByRole("menuitem", { name: /Zoom In/ });
   const zoomLabel = page.getByText(/^Zoom · \d+%$/);
 
-  // Pointer: open, read a shortcut, toggle the theme (checkbox items keep the menu open).
+  // Pointer: open, read a shortcut, pick the other theme (radio items keep the menu open).
   await viewMenu.click();
   const zoomBefore = await zoomLabel.textContent();
   await expect(zoomIn.locator("kbd")).toHaveText(/^(Ctrl|⌘)\+=$/);
-  await expect(darkTheme).toHaveAttribute("aria-checked", String(initialTheme === "dark"));
+  await expect(themeItems).toHaveText(["Light theme", "Dark theme", "System theme"]);
+  const initialPreference = (await checkedTheme.textContent())!.trim();
   // Portalled above Dockview: the item is the topmost element at its own center.
   await expect
     .poll(() =>
@@ -233,28 +245,37 @@ test("title bar menus work by pointer and keyboard and return focus", async () =
       }),
     )
     .toBe(true);
-  await darkTheme.click();
+  const otherName = initialTheme === "dark" ? "Light theme" : "Dark theme";
+  const otherTheme = page.getByRole("menuitemradio", { name: otherName });
+  await otherTheme.click();
   await expect.poll(theme).not.toBe(initialTheme);
-  await expect(darkTheme).toBeVisible();
+  await expect(checkedTheme).toHaveText(otherName);
+  await expect(otherTheme).toBeVisible();
   await page.keyboard.press("Escape");
-  await expect(darkTheme).toBeHidden();
+  await expect(otherTheme).toBeHidden();
   await expect(viewMenu).toBeFocused();
 
-  // Keyboard: ArrowDown opens on the first item, Enter toggles the theme back.
+  // Keyboard: ArrowDown opens on the first item, arrows + Enter restore the initial preference.
   await page.keyboard.press("ArrowDown");
   await expect(page.getByRole("menu")).toBeFocused();
-  await expect(darkTheme).toHaveAttribute("data-highlighted", "");
+  await expect(themeItems.first()).toHaveAttribute("data-highlighted", "");
+  const initialIndex = ["Light theme", "Dark theme", "System theme"].indexOf(initialPreference);
+  for (let i = 0; i < initialIndex; i++) await page.keyboard.press("ArrowDown");
+  await expect(themeItems.nth(initialIndex)).toHaveAttribute("data-highlighted", "");
+  // Arrow navigation refocuses the menu on the next frame; a select before that frame loses focus to body.
+  await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
   await page.keyboard.press("Enter");
   await expect.poll(theme).toBe(initialTheme);
+  await expect(checkedTheme).toHaveText(initialPreference);
   await page.keyboard.press("Escape");
-  await expect(darkTheme).toBeHidden();
+  await expect(themeItems.first()).toBeHidden();
   await expect(viewMenu).toBeFocused();
 
   // A regular item runs its command, closes the menu and refocuses the trigger.
   await page.keyboard.press("ArrowDown");
   await expect(page.getByRole("menu")).toBeFocused();
-  // Dark theme -> Fullscreen -> Grid -> Snap -> Zoom In (group labels are skipped).
-  for (let i = 0; i < 4; i++) await page.keyboard.press("ArrowDown");
+  // Light -> Dark -> System theme -> Fullscreen -> Grid -> Snap -> Zoom In (group labels are skipped).
+  for (let i = 0; i < 6; i++) await page.keyboard.press("ArrowDown");
   await expect(zoomIn).toHaveAttribute("data-highlighted", "");
   // Arrow navigation refocuses the menu on the next frame; a select before that frame loses focus to body.
   await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
@@ -300,7 +321,7 @@ test("production renderer bundle ships no Tailwind or Radix", () => {
 });
 
 // Last in the file: it reloads the window.
-test("theme toggle restyles Chakra, Dockview and Monaco and survives reload", async () => {
+test("System theme follows the OS live for Chakra, Dockview and Monaco and survives reload", async () => {
   pageErrors.length = 0;
   const theme = () => page.evaluate(() => document.documentElement.dataset.theme);
   const background = (selector: string) =>
@@ -328,36 +349,69 @@ test("theme toggle restyles Chakra, Dockview and Monaco and survives reload", as
     tab: await background(".dv-tab.dv-active-tab"),
     monaco: await background(".monaco-editor"),
   });
-  const toggleDarkTheme = async () => {
-    await page.getByRole("button", { name: "View menu" }).click();
-    await page.getByRole("menuitemcheckbox", { name: /Dark theme/ }).click();
+  const viewMenu = page.getByRole("button", { name: "View menu" });
+  const checkedPreference = async () => {
+    await viewMenu.click();
+    const name = (await page.getByRole("menuitemradio", { checked: true }).textContent())!.trim();
     await page.keyboard.press("Escape");
+    return name;
+  };
+  const selectTheme = async (name: string) => {
+    await viewMenu.click();
+    await page.getByRole("menuitemradio", { name }).click();
+    await page.keyboard.press("Escape");
+  };
+  const emulateOs = async (colorScheme: "dark" | "light") => {
+    await page.emulateMedia({ colorScheme });
+    await expect
+      .poll(() => page.evaluate(() => matchMedia("(prefers-color-scheme: dark)").matches))
+      .toBe(colorScheme === "dark");
   };
 
   await showPanels();
-  const initialTheme = await theme();
-  const before = await colors();
-  expect(before.panel).toBe(await surface());
+  const initialPreference = await checkedPreference();
 
-  await toggleDarkTheme();
-  const toggledTheme = initialTheme === "dark" ? "light" : "dark";
-  await expect.poll(theme).toBe(toggledTheme);
-  await expect.poll(colors).not.toEqual(before);
-  const after = await colors();
-  expect(after.panel).not.toBe(before.panel);
-  expect(after.tab).not.toBe(before.tab);
-  expect(after.monaco).not.toBe(before.monaco);
-  expect(after.panel).toBe(await surface());
+  await emulateOs("dark");
+  await selectTheme("System theme");
+  await expect.poll(theme).toBe("dark");
+  const dark = await colors();
+  expect(dark.panel).toBe(await surface());
 
+  // Live: no reload, no menu interaction.
+  await emulateOs("light");
+  await expect.poll(theme).toBe("light");
+  await expect.poll(colors).not.toEqual(dark);
+  const light = await colors();
+  expect(light.panel).not.toBe(dark.panel);
+  expect(light.tab).not.toBe(dark.tab);
+  expect(light.monaco).not.toBe(dark.monaco);
+  expect(light.panel).toBe(await surface());
+
+  // The System preference survives reload and keeps following the OS afterwards.
   await page.reload();
   await expect(page.locator("#viewport-canvas")).toBeVisible({ timeout: 30_000 });
-  expect(await theme()).toBe(toggledTheme);
+  await emulateOs("light");
+  expect(await theme()).toBe("light");
+  expect(await checkedPreference()).toBe("System theme");
   await showPanels();
-  await expect.poll(colors).toEqual(after);
+  await expect.poll(colors).toEqual(light);
+  await emulateOs("dark");
+  await expect.poll(theme).toBe("dark");
+  await expect.poll(colors).toEqual(dark);
 
-  // Restore the persisted theme for later specs.
-  await toggleDarkTheme();
-  await expect.poll(theme).toBe(initialTheme);
-  await expect.poll(colors).toEqual(before);
+  // An explicit choice pins the theme whatever the OS does.
+  await selectTheme("Light theme");
+  await expect.poll(theme).toBe("light");
+  await expect.poll(colors).toEqual(light);
+  await emulateOs("light");
+  await emulateOs("dark");
+  await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
+  expect(await theme()).toBe("light");
+  expect(await colors()).toEqual(light);
+
+  // Restore the persisted preference and the real OS scheme for later specs.
+  await selectTheme(initialPreference);
+  await page.emulateMedia({ colorScheme: null });
+  expect(await checkedPreference()).toBe(initialPreference);
   expect(pageErrors, `page errors: ${pageErrors.join("\n")}`).toEqual([]);
 });

@@ -15,6 +15,7 @@ import {
   Maximize,
   Maximize2,
   Minus,
+  Monitor,
   Moon,
   RotateCcw,
   Save,
@@ -27,6 +28,7 @@ import {
 } from "lucide-react";
 import { PANELS, resetLayout, togglePanel, useOpenPanelIds } from "../app/dock.js";
 import { editor, useEditorSnapshot, useProjectSession } from "../app/useEditor.js";
+import type { ThemePreference } from "../app/theme.js";
 import { useUiStore } from "../store/uiStore.js";
 
 import {
@@ -34,6 +36,8 @@ import {
   MenuContent,
   MenuGroup,
   MenuItem,
+  MenuRadioItem,
+  MenuRadioItemGroup,
   MenuRoot,
   MenuSeparator,
   MenuShortcut,
@@ -207,22 +211,28 @@ function FileMenu() {
 function ViewMenu() {
   const snap = useEditorSnapshot();
   const open = useOpenPanelIds();
-  const colorTheme = useUiStore((s) => s.colorTheme);
-  const setColorTheme = useUiStore((s) => s.setColorTheme);
+  const themePreference = useUiStore((s) => s.themePreference);
+  const setThemePreference = useUiStore((s) => s.setThemePreference);
   const fullscreen = useUiStore((s) => s.fullscreen);
   const zoomPercent = Math.round(snap.state.zoom * 100);
 
   return (
     <TitleMenu label="View" ariaLabel="View menu">
       <MenuGroup label="Appearance">
-        <MenuCheckboxItem
-          value="dark-theme"
-          closeOnSelect={false}
-          checked={colorTheme === "dark"}
-          onCheckedChange={(checked) => setColorTheme(checked ? "dark" : "light")}
+        <MenuRadioItemGroup
+          value={themePreference}
+          onValueChange={({ value }) => setThemePreference(value as ThemePreference)}
         >
-          <Moon size={13} /> Dark theme
-        </MenuCheckboxItem>
+          <MenuRadioItem value="light" closeOnSelect={false}>
+            <Sun size={13} /> Light theme
+          </MenuRadioItem>
+          <MenuRadioItem value="dark" closeOnSelect={false}>
+            <Moon size={13} /> Dark theme
+          </MenuRadioItem>
+          <MenuRadioItem value="system" closeOnSelect={false}>
+            <Monitor size={13} /> System theme
+          </MenuRadioItem>
+        </MenuRadioItemGroup>
         <MenuCheckboxItem
           value="fullscreen"
           checked={fullscreen}
