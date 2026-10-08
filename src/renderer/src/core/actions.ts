@@ -11,6 +11,10 @@ import {
   requireDefinition,
   setTiles,
   type DecorationInstance,
+  type EditorCommand,
+  type ImageLayer,
+  type LevelArt,
+  type LevelDocument,
   type LevelObjectInstance,
   type TileEdit,
 } from "@mmx/content-schema";
@@ -178,4 +182,80 @@ export function nudgeSelection(store: EditorStore, dx: number, dy: number): void
   const selectedIds = selectedObjectIds(selection);
   if (selectedIds.length === 0) return;
   store.execute(moveObjects(selectedIds, dx, dy));
+}
+
+/** Set the document's image layers and backdrop; absent/empty values drop their key. */
+function withArt(doc: LevelDocument, art: LevelArt): LevelDocument {
+  const next: LevelDocument = { ...doc, imageLayers: art.imageLayers, backdrop: art.backdrop };
+  if (!next.imageLayers?.length) delete next.imageLayers;
+  if (next.backdrop === undefined) delete next.backdrop;
+  return next;
+}
+
+/** Replace the level art (image layers + backdrop) as one undoable command. */
+export function setLevelArt(doc: LevelDocument, art: LevelArt, label: string): EditorCommand {
+  const before: LevelArt = { imageLayers: doc.imageLayers, backdrop: doc.backdrop };
+  return {
+    label,
+    execute: (d) => withArt(d, art),
+    undo: (d) => withArt(d, before),
+  };
+}
+
+function editImageLayers(
+  store: EditorStore,
+  label: string,
+  edit: (layers: ImageLayer[]) => ImageLayer[],
+): void {
+  const doc = store.get().document;
+  store.execute(
+    setLevelArt(doc, { imageLayers: edit([...(doc.imageLayers ?? [])]), backdrop: doc.backdrop }, label),
+  );
+}
+
+/** Add a world-locked image layer at the world origin; returns its id. */
+export function addImageLayer(store: EditorStore, assetId: string): string {
+  const id = newId();
+  editImageLayers(store, "Add image layer", (layers) => [
+    ...layers,
+    { id, assetId, x: 0, y: 0, parallax: 1, layer: "world-back" },
+  ]);
+  return id;
+}
+
+export function removeImageLayer(store: EditorStore, id: string): void {
+  editImageLayers(store, "Remove image layer", (layers) => layers.filter((l) => l.id !== id));
+}
+
+/** Move a layer one step earlier (-1, drawn further back) or later (+1) in the list. */
+export function reorderImageLayer(store: EditorStore, id: string, delta: -1 | 1): void {
+  const layers = store.get().document.imageLayers ?? [];
+  const from = layers.findIndex((l) => l.id === id);
+  const to = from + delta;
+  if (from < 0 || to < 0 || to >= layers.length) return;
+  editImageLayers(store, "Reorder image layers", (next) => {
+    [next[from], next[to]] = [next[to]!, next[from]!];
+    return next;
+  });
+}
+
+export function updateImageLayer(
+  store: EditorStore,
+  id: string,
+  patch: Partial<Pick<ImageLayer, "layer" | "parallax" | "x" | "y">>,
+): void {
+  const layer = store.get().document.imageLayers?.find((l) => l.id === id);
+  if (!layer || Object.entries(patch).every(([k, v]) => layer[k as keyof ImageLayer] === v)) return;
+  editImageLayers(store, "Edit image layer", (layers) =>
+    layers.map((l) => (l.id === id ? { ...l, ...patch } : l)),
+  );
+}
+
+/** Set (`#rrggbb`) or clear (undefined) the level backdrop colour. */
+export function setBackdrop(store: EditorStore, backdrop: string | undefined): void {
+  const doc = store.get().document;
+  if (doc.backdrop === backdrop) return;
+  store.execute(
+    setLevelArt(doc, { imageLayers: doc.imageLayers, backdrop }, backdrop ? "Set backdrop" : "Clear backdrop"),
+  );
 }

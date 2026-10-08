@@ -70,6 +70,7 @@ class PlaytestSession implements EditorPlaytestSession {
             assets,
             manifest: this.options.rendererManifest,
             decorations: this.document.decorations,
+            levelArt: { imageLayers: this.document.imageLayers, backdrop: this.document.backdrop },
           },
         );
         if (this.disposed || this.stopped) {

@@ -25,7 +25,8 @@ export type ImportAssetResult = {
 
 function defaultLogicalId(sourcePath: string, kind: AssetKind): string {
   const stem = sanitizeLogicalIdCandidate(stemPortable(sourcePath));
-  const prefix = kind === "font" ? "font" : kind === "sound" ? "sfx" : "sprite";
+  const prefix =
+    kind === "font" ? "font" : kind === "sound" ? "sfx" : kind === "image" ? "image" : "sprite";
   return `${prefix}.${stem}`;
 }
 

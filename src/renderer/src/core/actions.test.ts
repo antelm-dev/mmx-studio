@@ -7,6 +7,7 @@ import {
   selectedTileIndices,
 } from "./EditorStore.js";
 import {
+  addImageLayer,
   cellIndex,
   deleteSelection,
   duplicateSelection,
@@ -14,7 +15,11 @@ import {
   paintTiles,
   placeAt,
   placeDecorationAt,
+  removeImageLayer,
+  reorderImageLayer,
+  setBackdrop,
   setTileAt,
+  updateImageLayer,
 } from "./actions.js";
 
 function freshStore(): EditorStore {
@@ -199,5 +204,71 @@ describe("editor actions", () => {
     const after = store.get().document.decorations.find((d) => d.id === id)!;
     expect(after.x).toBe(before.x + 3);
     expect(after.y).toBe(before.y - 2);
+  });
+});
+
+describe("image layer actions", () => {
+  const ids = (store: EditorStore) => (store.get().document.imageLayers ?? []).map((l) => l.id);
+
+  it("adds a world-locked layer and undo removes the key entirely", () => {
+    const store = freshStore();
+    const id = addImageLayer(store, "image.stage");
+    expect(store.get().document.imageLayers).toEqual([
+      { id, assetId: "image.stage", x: 0, y: 0, parallax: 1, layer: "world-back" },
+    ]);
+    expect(store.isDirty).toBe(true);
+    store.undo();
+    expect("imageLayers" in store.get().document).toBe(false);
+    store.redo();
+    expect(ids(store)).toEqual([id]);
+  });
+
+  it("reorders, edits and removes layers, each as one undo step", () => {
+    const store = freshStore();
+    const a = addImageLayer(store, "image.a");
+    const b = addImageLayer(store, "image.b");
+
+    reorderImageLayer(store, b, -1);
+    expect(ids(store)).toEqual([b, a]);
+    reorderImageLayer(store, b, -1); // already first: no-op, no history entry
+    store.undo();
+    expect(ids(store)).toEqual([a, b]);
+
+    updateImageLayer(store, a, { layer: "background", parallax: 0.5, x: 8, y: -4 });
+    expect(store.get().document.imageLayers![0]).toMatchObject({
+      layer: "background",
+      parallax: 0.5,
+      x: 8,
+      y: -4,
+    });
+    store.undo();
+    expect(store.get().document.imageLayers![0]).toMatchObject({ layer: "world-back", parallax: 1 });
+
+    removeImageLayer(store, a);
+    expect(ids(store)).toEqual([b]);
+    store.undo();
+    expect(ids(store)).toEqual([a, b]);
+  });
+
+  it("sets and clears the backdrop with undo", () => {
+    const store = freshStore();
+    setBackdrop(store, "#3a1c5c");
+    expect(store.get().document.backdrop).toBe("#3a1c5c");
+    setBackdrop(store, undefined);
+    expect("backdrop" in store.get().document).toBe(false);
+    store.undo();
+    expect(store.get().document.backdrop).toBe("#3a1c5c");
+    store.undo();
+    expect("backdrop" in store.get().document).toBe(false);
+  });
+
+  it("reports image layers whose asset is not a project image", () => {
+    const store = freshStore();
+    addImageLayer(store, "sprite.bg");
+    const codes = store.validate(["image.stage"]).issues.map((i) => i.code);
+    expect(codes).toContain("imageLayer.asset.unknown");
+    expect(store.validate(["sprite.bg"]).issues.map((i) => i.code)).not.toContain(
+      "imageLayer.asset.unknown",
+    );
   });
 });
