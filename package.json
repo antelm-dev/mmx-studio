@@ -18,7 +18,7 @@
     "test": "pnpm test:unit && pnpm test:libs",
     "test:unit": "vitest run",
     "test:libs": "node --import tsx --test tests/editor-runtime/*.test.ts tests/project-io/*.test.ts tests/starter-template/*.test.ts",
-    "test:oracle": "node --import tsx --test --test-name-pattern=oracle tests/project-io/steam.test.ts tests/project-io/mmx1.test.ts tests/project-io/mmz1.test.ts",
+    "test:oracle": "node --import tsx --test --test-name-pattern=oracle tests/project-io/steam.test.ts tests/project-io/mmx1.test.ts tests/project-io/mmz1.test.ts tests/project-io/zero-project.test.ts",
     "test:watch": "vitest",
     "e2e": "playwright test",
     "generate:manifest": "node scripts/starter-template/generate-manifest.mjs",

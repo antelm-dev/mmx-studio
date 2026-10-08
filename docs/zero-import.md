@@ -5,6 +5,213 @@ read from the games is committed; the readers live in `src/project-io/import/`
 and are exported from `@mmx/project-io/node` (they use `node:fs`, so they stay
 out of the renderer-safe `@mmx/project-io` entry).
 
+## File → Import from Steam installs
+
+1. Install both games from Steam: Mega Man X Legacy Collection and Mega Man
+   Zero/ZX Legacy Collection. If they live outside the Steam libraries, set
+   `MMXLC_DIR` / `MZZXLC_DIR` before starting Studio.
+2. **File → Import from Steam installs…** and pick an **empty** output folder,
+   or a previous Zero import. Any other folder is refused: the import never writes
+   over other files. Keep the folder outside any git repository.
+3. The import runs in the main process (`src/main/ipc/import.ipc.ts`, module
+   `import`). It sends each step as an `import-progress` event, which shows as a
+   toast: locating the installs, MMX1, MMZ1 sprites, MMZ1 sounds, writing,
+   opening. The new project then opens.
+
+The errors are readable as is: a missing install (with the env variable to
+set), or an unexpected collection version (the MMX1 ROM is not found in
+`RXC1.exe`, the MMZ1 bank counts don't match, or a sound entry is missing).
+They show as an "Import failed: …" toast and in Problems, and the current
+project stays open.
+
+The pipeline is `readZeroSources()` followed by
+`writeZeroProject(out, template, sources)` (`import/zeroProject.ts`). The pure
+conversions are in `import/convert.ts`, and the design data (Zero's moves, the
+sound roles) in `import/sheets.ts`. A full import takes about 1 s.
+
+To play the result in the browser, run these from the mmx-core-ts checkout:
+
+```sh
+pnpm sim -- --project <out>
+pnpm factory:dev -- --project <out>
+```
+
+For the e2e test only, `MMX_STUDIO_ZERO_IMPORT_CACHE=<dir>` makes the command
+read a zero-x-mashup `game/cache`-shaped folder instead of the installs, with
+no sounds (`readZeroSourcesFromCache`).
+
+## The generated project
+
+```text
+project.json                         manifest: player.loadout "player.zero", anim.player.zero + sprite.player.zero + borrowed assets
+game/data.json                       bindings: playerAnimation + borrowed fontUi/sounds/shotAnimations/hudSprites
+levels/level.intro-highway.json      schemaVersion 2 level document: spawn + camera zones, imageLayers + backdrop
+assets/images/{stage,background}.png the MMX1 art, colour 0 transparent (image.stage, image.background)
+assets/sprites/player/zero.png       repacked sheet
+assets/sprites/player/zero_anims.json  { animations } (same clips as in project.json)
+assets/sounds/zero/<id>.wav          MMZ1 effects decoded to 16-bit PCM
+assets/music/stage.ogg               MMZ1 stage music, music.stage, bound as music.stage
+assets/{sprites/hud,sprites/effects,sounds,fonts}/...  copied from templates/mmx-demo
+ATTRIBUTION.md                       copied from templates/mmx-demo
+.gitignore                           catch-all: the folder is Capcom-derived
+```
+
+### Sprites
+
+- Every frame of every anim gets one fixed cell, 16 cells per row. The cell is the
+  smallest even size that fits all frames (72x54 today).
+- Frames are mirrored so Zero faces right, like X's frames.
+- The engine draws a fixed region centred at `feet - body_hh - 4` (see
+  `renderer-pixi/src/render/sprite.ts`), with `body_hh` = 15 for the `player.zero` actor
+  (`engine/src/data/actors.ts`), so each frame's mirrored anchor is placed at
+  `(cell.w / 2, cell.h / 2 + 19)`.
+
+### Clips
+
+`speed` is 60 and `duration` stays in 1/60 s (`AnimationCursor` holds a frame for
+`duration / speed` s). A `0xff` script becomes `loop: false`; a `0xfe` script becomes
+`loop: true` with every step kept; a script that loops to step k > 0 also gets
+`loopStart: k`, so the wind-up (jump/fall/dash/run/wall slide) plays once and the cursor
+then wraps to step k.
+
+Every move of `ZERO_MOVES` (`import/sheets.ts`, moved from zero-x-mashup `zero_moves.json`) is emitted under its own name (`idle`, `run`, `dash`,
+`dash_end`, `jump`, `fall`, `land`, `slash_1`..`slash_3`, `dash_slash`, `jump_slash`,
+`hurt`, `wall_slide`, `wall_jump`, `wall_dash_jump`, `wall_slash`). The clips X's
+abilities play are then added:
+
+| X clip | Zero source | Note |
+| --- | --- | --- |
+| `idle` | `idle` | |
+| `walk` | `run` | loop body |
+| `walk_start` | `run`, steps before the loop target | one-shot, Walk waits for it to finish. Kept because the engine's Walk still plays `walk_start` then `walk` itself (so the wind-up shows twice); it could derive this from `walk`'s `loopStart` instead |
+| `jump` | `jump` | |
+| `fall` | `fall` | |
+| `dash` | `dash` | |
+| `slide` | `wall_slide` | WallSlide plays `slide` |
+| `walljump` | `wall_jump` | |
+| `damage` | `hurt` | |
+| `recover` | **fallback**: first step of `idle` | X lowers his buster; Zero has no such pose. One-shot, Idle waits for it |
+| `weak` | **fallback**: `idle` | no low-health stance |
+| `beam` | **fallback**: `fall` | no teleport beam |
+| `beam_in` | **fallback**: `land`, one-shot | no beam landing |
+| `beam_equip` | **fallback**: `idle`, one-shot | no equip pose; one-shot so Intro ends |
+
+Death hides the player sprite and plays no clip. AirDash and DashJump reuse `dash` and
+`jump`; X's other clips (`airdash`, `crouch`, `shot_*`, ...) are not played by any ability.
+
+### Level
+
+| Collision byte | Tile | Slope profile `[left, right]` |
+| --- | --- | --- |
+| `0x00` | Empty (0) | |
+| `0x05`..`0x08` | SlopeUpRight (2) | `[0,4]`, `[4,8]`, `[8,12]`, `[12,16]` |
+| `0x09`..`0x0c` | SlopeUpLeft (3) | `[4,0]`, `[8,4]`, `[12,8]`, `[16,12]` |
+| anything else (`0x34`/`0x35` walkable top, `0x39`/`0x3a`, `0x3b` solid) | Solid (1) | |
+
+The slopes are 4-tile ramps rising 16 px (read from where the bytes sit in the grid:
+`05 06 07 08` climbs one row left to right, `0c 0b 0a 09` descends). The engine has no
+one-way tile, so walkable tops are solid. One `spawn` object sits at checkpoint 0's
+spawn `(128, 256)`; the Intro drops the player onto the road at y = 384. Only checkpoint
+0 gets one: the engine requires exactly one `spawn` (`spawn.count`) and has no checkpoint
+object, and `stage.json` keeps only the X of checkpoints 1-3. A death respawns at the
+level spawn.
+
+#### Camera zones
+
+`stage.json` `cameras[i]` holds checkpoint i's camera limits (`min_x`, `max_x`,
+`min_y`, `max_y`, read in the ROM's order after chX/chY, camX, camY, bkgX, bkgY). They bound the view's **top-left** corner; a `camera-zone` object
+bounds the whole view, so each becomes:
+
+```text
+x = min_x    width  = min(max_x + 398, level width)  - min_x     (398x224 = engine VIEW_WIDTH/VIEW_HEIGHT)
+y = min_y    height = min(max_y + 224, level height) - min_y
+```
+
+With that mapping the engine's pit rule (zone bottom + 32) lands where MMX's is
+(`max_y + 224 + 32`). Consecutive checkpoints with identical limits are one section and
+one zone (`camera-checkpoint-<first checkpoint>`): the engine binds the view to the zone
+the player is in, so cutting equal limits at each checkpoint X would only shove the view
+at every seam. The converter throws if two zones overlap, since the engine would then
+pick by hysteresis rather than by stage. Intro Highway today:
+
+| Zone | Checkpoints | Rect | Effect |
+| --- | --- | --- | --- |
+| `camera-checkpoint-0` | 0-2 | (0, 256) 7310x224 | Y locked at 256, X follows Zero |
+| `camera-checkpoint-3` | 3 | (0, 768) 8192x224 | the lower band, Y locked at 768 (checkpoint 3's X, 8208, lies past the 8192 px grid) |
+
+So the view holds Y = 256 along the road and does not follow jumps, and falling into the
+gap at x = 800 kills at y > 512 and respawns. Zero's screen X settles near 217, not
+MMX's 128: the engine's view is 398 wide and it adds its dead zone and look-ahead.
+
+The art becomes two `imageLayers`, both at (0, 0), plus the level `backdrop`:
+
+| Layer id | Asset | `layer` | `parallax` | Why |
+| --- | --- | --- | --- | --- |
+| `art-background` | `image.background` | `background` | 0.5 | MMX1 scrolls it at camX / 2; its y stays 0 on the highway |
+| `art-stage` | `image.stage` | `world-back` | 1 | the foreground painting, locked to the tiles |
+
+`backdrop` is palette colour 0 (`stage.json` `backdrop`) as `#rrggbb`; it fills
+whatever both images leave transparent.
+
+Not converted yet: enemies (the Pantheon comes with #28).
+
+### Bindings
+
+`game/data.json` binds `playerAnimation` to Zero and `music.stage` to the MMZ1 stage track (engine `bindings.music.stage`, runtime id `musicStage`, looped while a level plays, in the browser build and in Studio Play), with no `playerPointingSheet` since
+Zero has no detached arm (the renderer then draws the arm layer from the normal sheet).
+`enemyAnimations` and `pickupAnimations` stay empty: the level has no enemies or
+pickups and the build accepts empty maps.
+
+### Borrowed from the template
+
+The browser build (`pnpm factory:build`/`factory:dev`, mmx-core-ts
+`build-tools/src/studioBindings.ts`) requires a non-empty `shotAnimations`,
+`hudSprites` with `xBar`, `hpFill` and `weaponBar`, and a sound for every
+`GAMEPLAY_SOUND_IDS` entry; the HUD and menus also use `fontUi`. The installs give none of
+these, so the import copies them from `templates/mmx-demo`:
+
+- the template's `fontUi`, `sounds`, `shotAnimations` and `hudSprites` bindings,
+  verbatim;
+- every asset those bindings name, plus the `sheetAssetId` sprite of each effect
+  animation, as manifest entries with the template's ids and paths, and their files;
+- `ATTRIBUTION.md`.
+
+Template sounds whose id an MMZ1 sound replaces (see [Sounds](#sounds)) are neither
+bound nor copied. So Zero currently plays with X's buster shots/effects, HP bar and the
+sounds MMZ1 does not map. This is a stopgap until Zero has his own HUD/effects.
+
+### Sounds
+
+Both come from the Mega Man Zero/ZX Legacy Collection:
+
+- **Effects:** `ZERO_SOUNDS.sfx` (`import/sheets.ts`, moved from zero-x-mashup
+  `sounds.json`) gives, for each role, an entry index among the
+  `sound\se\wav\...` entries of `nativePCx64/RZZC/romPC/Zero1SE.arc`. Each
+  entry is decoded to 16-bit PCM (see
+  [MMZ1 sound effects](#mmz1-sound-effects-importadpcmts)).
+- **Music:** `ZERO_SOUNDS.music` (`zero1_bgm/zero1_bgm005.sngw`, the first
+  stage) is plain Ogg Vorbis. It is copied to `assets/music/stage.ogg`,
+  declared as `music.stage` (kind `sound`) and bound as `bindings.music.stage`.
+  MMX1's own Intro music is scrambled and out of scope.
+
+Role mapping, role -> engine sound id (`SOUND_ROLES`; ids from
+`@mmx/browser-audio` `GAMEPLAY_SOUND_IDS` plus the optional `slash`):
+
+| Role | Entry | Sound id | Note |
+| --- | --- | --- | --- |
+| `slash` | 16 | `slash` | optional id, Zero's saber swing |
+| `dash` | 19 | `dash` | |
+| `land` | 13 | `land` | |
+| `buster_shot` | 17 | `lemon` | X's small buster shot id |
+| `hurt` | 21 | `damage` | |
+| `enemy_shot` | 71 | - | no engine id for enemy shots |
+| `wall_kick` | 19 | - | no id of its own: the engine plays `jump` on WallJump |
+
+The roles are still **guessed by ear** (matched against a recording of the real game,
+not verified); fix them in `ZERO_SOUNDS` and re-import. Every other id
+(`jump`, `wallslide`, `enemyHit`, `playerDeath`, ...) keeps the template sound; MMZ1's
+jumps are silent, but an unbound required id would break the build.
+
 ## Steam installs (`import/steam.ts`)
 
 | Game | Folder in `steamapps/common` | Checked marker | Override |
@@ -28,8 +235,8 @@ directly, read only below the located roots, and never write there (see
 
 `readMmx1Install(root)` reads `RXC1.exe` once into memory and returns the
 foreground (`stage`) and background RGBA buffers plus the `stage.json` object
-`scripts/zero-import` reads from `zero-x-mashup/game/cache` today. No ROM file
-is written. `encodePng` (`import/png.ts`) turns a buffer into the cache PNG.
+(the shape of zero-x-mashup's `game/cache/stage.json`). No ROM file is written.
+`encodePng` (`import/png.ts`) turns a buffer into a PNG.
 
 **ROM inside the exe.** The exe holds several SNES images. MMX1 US v1.0 is the
 one whose internal header (`"MEGAMAN X"` padded to 21 bytes, at ROM `0x7FC0`)
@@ -174,7 +381,7 @@ compare the stage, background and Zero atlas pixels, and `stage.json` and
 scripts. This is the TS counterpart of the Rust `cargo test --release`.
 
 ```bash
-# needs the two Steam installs (or MMXLC_DIR / MZZXLC_DIR) and a built cache
+# needs the two Steam installs (or MMXLC_DIR / MZZXLC_DIR) and a built cache (python game/build_cache.py)
 ZERO_X_MASHUP_ROOT=../zero-x-mashup pnpm test:oracle
 ```
 

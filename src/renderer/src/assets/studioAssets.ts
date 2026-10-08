@@ -1,3 +1,4 @@
+import { STAGE_MUSIC_ID } from "@mmx/browser-audio";
 import type { ProjectAsset, ProjectDocument } from "@mmx/project-schema";
 import {
   buildRendererAssetManifestFromProject,
@@ -17,6 +18,8 @@ export type StudioGameData = {
     playerAnimation: string;
     playerPointingSheet?: string;
     sounds: Record<string, string>;
+    /** Optional level music (a sound asset id), looped while Play runs. */
+    music?: { stage?: string };
     enemyAnimations: Record<string, string>;
     pickupAnimations: Record<string, string>;
     shotAnimations: Record<string, string>;
@@ -112,7 +115,8 @@ export function buildStudioAssets(
   const manifest = buildRendererAssetManifestFromProject(project, rendererBindings, resolveUrl, {
     shotAnims,
   });
-  const soundBindings = { ...bindings.sounds };
+  const soundBindings: Record<string, string> = { ...bindings.sounds };
+  if (bindings.music?.stage) soundBindings[STAGE_MUSIC_ID] = bindings.music.stage;
   return {
     project,
     manifest,

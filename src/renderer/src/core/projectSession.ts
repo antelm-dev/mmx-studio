@@ -269,6 +269,33 @@ export class ProjectSession {
     return this.state.issues;
   }
 
+  /** File → Import from Steam installs: build the Zero × MMX project into a picked folder and open it. */
+  async importFromSteam(onProgress: (step: string) => void): Promise<ProjectIssue[]> {
+    const bridge = window.studio?.project;
+    const importer = window.studio?.import;
+    if (!bridge || !importer) {
+      return [{ severity: "error", code: "project.unavailable", path: "/", message: "Project I/O is only available in the Electron shell." }];
+    }
+
+    const rootPath = await bridge.pickDirectory("Import from Steam installs: output folder");
+    if (!rootPath) return [];
+
+    const unsubscribe = importer.onImportProgress(onProgress);
+    try {
+      const result = await importer.fromSteam(rootPath);
+      if (!result.ok) return result.issues;
+      this.switchProject({
+        open: true,
+        rootPath: result.value.rootPath,
+        project: result.value.project,
+        issues: [...result.issues, ...validateOpenProject(result.value.project)],
+      });
+      return this.state.issues;
+    } finally {
+      unsubscribe();
+    }
+  }
+
   async saveProject(): Promise<ProjectIssue[]> {
     const bridge = window.studio?.project;
     const { rootPath, project } = this.state;

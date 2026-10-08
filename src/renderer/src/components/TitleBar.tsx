@@ -5,6 +5,7 @@ import {
   ClipboardCopy,
   Code2,
   Copy,
+  Download,
   FilePlus2,
   FolderKanban,
   FolderOpen,
@@ -117,6 +118,9 @@ function FileMenu() {
       </DropdownMenu.Item>
       <DropdownMenu.Item className={ctxItemCls(false)} onSelect={() => void editor.openProject()}>
         <FolderOpen size={13} /> Open Project…
+      </DropdownMenu.Item>
+      <DropdownMenu.Item className={ctxItemCls(false)} onSelect={() => void editor.importFromSteam()}>
+        <Download size={13} /> Import from Steam installs…
       </DropdownMenu.Item>
       <DropdownMenu.Item
         className={ctxItemCls(!project.open)}

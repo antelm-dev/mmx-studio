@@ -216,7 +216,7 @@ function render(rom: Uint8Array, layer: Layer, grid: number[][]): Rgba {
   return { width, height, px };
 }
 
-/** Intro Highway (level 0): foreground and background art plus the stage.json data the zero-import converter reads. */
+/** Intro Highway (level 0): foreground and background art plus the stage.json data the project import reads. */
 export function readMmx1Stage(rom: Uint8Array): Mmx1Stage {
   const { w } = reader(rom);
   const level = 0;
