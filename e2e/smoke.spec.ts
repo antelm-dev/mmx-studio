@@ -154,6 +154,7 @@ test("renders non-empty palette sprite previews", async () => {
       .poll(async () => img.evaluate((el: HTMLImageElement) => el.naturalWidth * el.naturalHeight))
       .toBeGreaterThan(0);
   }
+
 });
 
 test("switches to the Scene tab and lists placed objects", async () => {
@@ -192,6 +193,21 @@ test("enters and exits Play mode without asset URL failures", async () => {
   await expect(page.locator("#play-canvas")).toHaveCount(0);
   await expect(page.locator("#viewport-canvas")).toBeVisible();
   await expect(page.getByRole("button", { name: /^Play$/ })).toBeVisible();
+});
+
+test("Escape closes a title bar menu in Play without stopping Play", async () => {
+  await page.getByRole("button", { name: /^Play$/ }).click();
+  await expect(page.locator("#play-canvas")).toBeVisible({ timeout: 30_000 });
+  await page.getByRole("button", { name: "View menu" }).click();
+  await expect(page.getByRole("menu")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("menu")).toBeHidden();
+  await expect(page.locator("#play-canvas")).toBeVisible();
+  await expect(page.getByRole("button", { name: /^Stop$/ })).toBeVisible();
+  // With no menu open, Escape still exits Play.
+  await page.keyboard.press("Escape");
+  await expect(page.locator("#play-canvas")).toHaveCount(0);
+  await expect(page.locator("#viewport-canvas")).toBeVisible();
 });
 
 test("toggles developer tools from the Help menu", async () => {

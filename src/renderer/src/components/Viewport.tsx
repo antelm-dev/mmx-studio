@@ -163,8 +163,6 @@ export function Viewport() {
           getAnchorRect: () =>
             contextMenu && { x: contextMenu.clientX, y: contextMenu.clientY, width: 0, height: 0 },
         }}
-        // Escape belongs to the menu, not the editor (which would also clear the selection).
-        onEscapeKeyDown={(e) => e.stopPropagation()}
         onOpenChange={({ open }) => {
           if (!open) editor.closeEmptyContextMenu();
         }}
