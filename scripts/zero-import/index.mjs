@@ -5,7 +5,7 @@ import { cpSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { crc32, deflateSync, inflateSync } from "node:zlib";
 
-import { cellSize, introHighwayArt, placeInCell, tileOf, toClip } from "./convert.mjs";
+import { cameraZones, cellSize, introHighwayArt, placeInCell, tileOf, toClip } from "./convert.mjs";
 
 const [cacheArg, outArg] = process.argv.slice(2);
 if (!cacheArg || !outArg) {
@@ -145,7 +145,8 @@ for (const [name, [move, mode]] of Object.entries(X_CLIPS)) animations[name] = c
 write("assets/sprites/player/zero.png", writePng(sheet));
 write("assets/sprites/player/zero_anims.json", { animations });
 
-// --- Level: collision grid -> tiles + slopes, spawn from checkpoint 0.
+// --- Level: collision grid -> tiles + slopes, camera zones from the checkpoints, spawn from
+// checkpoint 0 (the engine allows exactly one spawn and has no checkpoint object).
 const stage = readJson(join(cache, "stage.json"));
 const tiles = [];
 const slopes = {};
@@ -165,7 +166,10 @@ write("levels/level.intro-highway.json", {
   rows: stage.h,
   tiles,
   slopes,
-  objects: [{ id: "spawn-checkpoint-0", definitionId: "spawn", x: stage.spawn[0], y: stage.spawn[1] }],
+  objects: [
+    { id: "spawn-checkpoint-0", definitionId: "spawn", x: stage.spawn[0], y: stage.spawn[1] },
+    ...cameraZones(stage.cameras, stage.w * stage.cell, stage.h * stage.cell),
+  ],
   decorations: [],
   ...introHighwayArt(stage.backdrop),
 });

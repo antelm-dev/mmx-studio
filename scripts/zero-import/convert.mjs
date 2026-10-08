@@ -1,5 +1,6 @@
 // Pure conversions from the zero-x-mashup cache formats to Studio project formats.
 // See README.md in this folder for both formats and the mapping.
+import { VIEW_HEIGHT, VIEW_WIDTH } from "@mmx/engine";
 
 const LOOP = 0xfe;
 const HOLD = 0xff;
@@ -100,4 +101,36 @@ export function introHighwayArt(backdrop) {
     ],
     backdrop: `#${hex}`,
   };
+}
+
+/**
+ * Checkpoint camera limits -> `camera-zone` objects. MMX limits bound the view's top-left
+ * corner (min..max), a CameraZone bounds the whole view, so the far edges add the engine's
+ * view size (engine PR #28: that puts its pit line, zone bottom + 32, where MMX's is).
+ * Consecutive checkpoints with the same limits are one section, one zone: the engine binds
+ * the view to the zone the player is in, so cutting identical limits at checkpoint X would
+ * only shove the view at each seam. Zones must not overlap, else the engine's
+ * current-zone hysteresis, not the stage, decides which limits apply.
+ */
+export function cameraZones(cameras, worldW, worldH) {
+  const same = (a, b) => ["min_x", "max_x", "min_y", "max_y"].every((k) => a[k] === b[k]);
+  const zones = [];
+  cameras.forEach((c, i) => {
+    if (i > 0 && same(c, cameras[i - 1])) return;
+    zones.push({
+      id: `camera-checkpoint-${i}`,
+      definitionId: "camera-zone",
+      x: c.min_x,
+      y: c.min_y,
+      width: Math.min(c.max_x + VIEW_WIDTH, worldW) - c.min_x,
+      height: Math.min(c.max_y + VIEW_HEIGHT, worldH) - c.min_y,
+    });
+  });
+  for (const [i, a] of zones.entries()) {
+    for (const b of zones.slice(i + 1)) {
+      const apart = a.x + a.width <= b.x || b.x + b.width <= a.x || a.y + a.height <= b.y || b.y + b.height <= a.y;
+      if (!apart) throw new Error(`camera zones ${a.id} and ${b.id} overlap`);
+    }
+  }
+  return zones;
 }
