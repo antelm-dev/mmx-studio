@@ -36,7 +36,7 @@ back to step `<frame>`; `0xff` ends it and holds the last step.
 ## Output: the Studio project
 
 ```text
-project.json                         manifest: anim.player.zero + sprite.player.zero + borrowed assets
+project.json                         manifest: player.loadout "player.zero", anim.player.zero + sprite.player.zero + borrowed assets
 game/data.json                       bindings: playerAnimation + borrowed fontUi/sounds/shotAnimations/hudSprites
 levels/level.intro-highway.json      schemaVersion 2 level document
 assets/sprites/player/zero.png       repacked sheet

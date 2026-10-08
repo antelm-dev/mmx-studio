@@ -72,6 +72,7 @@ describe.skipIf(!existsSync(generated))("generated zero project", () => {
   it("loads through Studio's project-io", async () => {
     const result = await loadProject(createNodeFileSystem(generated));
     expect(result.ok ? [] : result.issues).toEqual([]);
+    expect(result.ok && result.value.manifest.player).toEqual({ loadout: "player.zero" });
   });
 
   // Mirrors what mmx-core-ts build-tools/src/studioBindings.ts requires of the browser build.

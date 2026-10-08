@@ -75,6 +75,7 @@ export class EditorController {
       getHost: () => this.host,
       getFileAccess: () => this.fileAccess,
       getAssets: () => projectSession.getAssets(),
+      getLoadoutId: () => projectSession.getSnapshot().project?.manifest.player?.loadout,
       validate: () => this.store.validate(),
       toast: (msg) => this.toast(msg),
       focusObject: (id) => this.focusObject(id),
@@ -98,6 +99,12 @@ export class EditorController {
 
     this.snapshot = this.build("open");
     this.store.subscribe((_, reason) => this.onStoreChange(reason));
+    // Manifest edits (e.g. the player loadout) live in the project session, not the store.
+    projectSession.subscribe(() => {
+      if (this.snapshot.dirty === this.isDirty) return;
+      this.snapshot = { ...this.snapshot, dirty: this.isDirty };
+      this.emit();
+    });
     this.syncPageTitle(this.snapshot.levelTitle);
   }
 
@@ -115,6 +122,10 @@ export class EditorController {
   subscribePlaytest = (fn: () => void): (() => void) => this.playtest.subscribe(fn);
   getPlaytestSnapshot = (): PlaytestSnapshot => this.playtest.getSnapshot();
 
+  private get isDirty(): boolean {
+    return this.store.isDirty || projectSession.getSnapshot().dirty === true;
+  }
+
   private computeTitle(): string {
     return this.store.get().document.name || "Untitled";
   }
@@ -126,7 +137,7 @@ export class EditorController {
       state: this.store.get(),
       canUndo: keepDerived ? prev.canUndo : this.store.canUndo,
       canRedo: keepDerived ? prev.canRedo : this.store.canRedo,
-      dirty: keepDerived ? prev.dirty : this.store.isDirty,
+      dirty: keepDerived ? prev.dirty : this.isDirty,
       validation: keepDerived ? prev.validation : this.store.validate(),
       levelTitle: this.computeTitle(),
     };
@@ -339,7 +350,7 @@ export class EditorController {
   }
 
   private confirmDiscardIfDirty(action: string): boolean {
-    if (!this.store.isDirty) return true;
+    if (!this.isDirty) return true;
     return window.confirm(`${action}\n\nUnsaved changes will be lost.`);
   }
 

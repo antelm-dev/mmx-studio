@@ -1,6 +1,7 @@
 import { serializeProject, validateProject, type ProjectDocument } from "@mmx/project-schema";
 
 import type { FileSystem } from "./fs.js";
+import { PROJECT_VALIDATION } from "./project.js";
 import { fail, issue, succeed, type ProjectResult, type StudioProject } from "./model.js";
 import { GAME_DATA_FILE, PORTABLE_EXPORT_FILES, PROJECT_MANIFEST } from "./paths.js";
 import { collectGameBindingAssetIds, filterReferencedAssets } from "./references.js";
@@ -70,7 +71,7 @@ export async function exportProject(
   );
   if (!destinationGuard.ok) return fail(destinationGuard.issues);
 
-  const validation = validateProject(project.manifest);
+  const validation = validateProject(project.manifest, PROJECT_VALIDATION);
   if (!validation.ok) {
     return fail(
       validation.issues.map((entry) => ({

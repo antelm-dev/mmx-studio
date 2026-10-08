@@ -10,6 +10,8 @@ export interface CreatePlaytestOptions {
   host?: HTMLElement;
   audio?: PlaytestAudio;
   seed?: number;
+  /** Compiled player loadout id (the project's `player.loadout`); engine default when omitted. */
+  loadoutId?: string;
   onSnapshot?: (snapshot: PlaytestSnapshot) => void;
   onError?: (error: string) => void;
   onExitToObject?: (sourceEntityId: string) => void;
@@ -30,6 +32,8 @@ export interface EditorPlaytestSession {
 
   togglePause(): void;
   readonly isPaused: boolean;
+  /** Ability names of the running player's loadout (empty when stopped). */
+  readonly playerMoveset: readonly string[];
   setCheckpoint(): void;
   restartCheckpoint(): void;
   restartLevel(): void;

@@ -19,7 +19,8 @@ import {
   type ValidationIssue,
 } from "@mmx/content-schema";
 import { getDecorationAsset } from "@mmx/renderer-pixi";
-import { editor, useEditorSnapshot } from "../app/useEditor.js";
+import { LOADOUT_IDS } from "@mmx/project-io";
+import { editor, projectSession, useEditorSnapshot, useProjectSession } from "../app/useEditor.js";
 import { selectedDecorationIds, selectedObjectIds } from "../core/EditorStore.js";
 import {
   actionBtn,
@@ -386,6 +387,8 @@ export function Inspector() {
             </div>
           </>
         ) : (
+          <>
+          <ProjectSettings />
           <div className={emptyState}>
             <div className={emptyIcon}>
               <MousePointer2 size={20} />
@@ -401,9 +404,61 @@ export function Inspector() {
               <ListTree size={14} /> Browse scene objects
             </button>
           </div>
+          </>
         )}
       </div>
     </div>
+  );
+}
+
+/** `player.x` -> "X", `player.zero` -> "Zero"; any other id is shown as-is. */
+function loadoutLabel(id: string): string {
+  const name = id.startsWith("player.") ? id.slice("player.".length) : id;
+  return name.length <= 1 ? name.toUpperCase() : name.charAt(0).toUpperCase() + name.slice(1);
+}
+
+/** Project-wide settings shown when nothing is selected and a project is open. */
+function ProjectSettings() {
+  const project = useProjectSession().project;
+  if (!project) return null;
+  const loadout = project.manifest.player?.loadout ?? "player.x";
+  return (
+    <>
+      <div className={cx(sectionTitle, sectionTitleSub)}>Project</div>
+      <div className="flex flex-col py-[3px] px-3.5">
+        <span className={fieldLabel}>Player loadout</span>
+        <Select.Root value={loadout} onValueChange={(id) => projectSession.setPlayerLoadout(id)}>
+          <Select.Trigger
+            aria-label="Player loadout"
+            className="flex items-center justify-between gap-2 w-full h-8 px-[9px] border border-border-strong rounded-[7px] bg-raised text-fg text-xs cursor-pointer outline-none"
+          >
+            <Select.Value />
+            <Select.Icon>
+              <ChevronDown size={14} />
+            </Select.Icon>
+          </Select.Trigger>
+          <Select.Portal>
+            <Select.Content
+              className="z-[60] bg-popover border border-popover-border rounded-lg shadow-[0_12px_32px_rgba(0,0,0,0.45)] py-1 overflow-hidden"
+              position="popper"
+              sideOffset={4}
+            >
+              <Select.Viewport>
+                {LOADOUT_IDS.map((id) => (
+                  <Select.Item
+                    key={id}
+                    value={id}
+                    className="flex items-center h-[30px] px-3 text-menu-fg text-xs cursor-pointer outline-none data-[highlighted]:bg-popover-hover data-[highlighted]:text-menu-fg-hover"
+                  >
+                    <Select.ItemText>{loadoutLabel(id)}</Select.ItemText>
+                  </Select.Item>
+                ))}
+              </Select.Viewport>
+            </Select.Content>
+          </Select.Portal>
+        </Select.Root>
+      </div>
+    </>
   );
 }
 

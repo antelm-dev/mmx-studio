@@ -20,6 +20,8 @@ export interface PlaytestCallbacks {
   getFileAccess: () => FileAccess;
   /** The open project's assets (starter fallback), or null when its bindings are invalid. */
   getAssets: () => Promise<StudioAssets | null>;
+  /** The open project's `player.loadout`, or undefined for the engine default. */
+  getLoadoutId: () => string | undefined;
   validate: () => ValidationResult;
   toast: (message: string) => void;
   /** Called when play exits and the source entity should receive focus. */
@@ -122,8 +124,10 @@ export class EditorPlaytestController {
     try {
       await audio.load();
       const files = this.cb.getFileAccess();
+      const loadoutId = this.cb.getLoadoutId();
       const session = createPlaytest(state.document, {
         host,
+        loadoutId,
         audio,
         getBindings: () => settings.snapshot().input.bindings,
         isPauseOnBlur: () => settings.snapshot().gameplay.pauseOnBlur,
@@ -163,8 +167,10 @@ export class EditorPlaytestController {
         return;
       }
       this.play = session;
-      // Lets e2e tests tell which project's player sheet Play loaded.
+      // Lets e2e tests tell which player sheet and loadout Play is running.
       host.dataset.playerSheet = assets.manifest.playerSheet;
+      host.dataset.playerLoadout = loadoutId ?? "player.x";
+      host.dataset.playerMoveset = session.playerMoveset.join(" ");
     } catch (error) {
       this.cb.toast(
         `Could not start Play: ${error instanceof Error ? error.message : String(error)}`,
