@@ -5,6 +5,48 @@ read from the games is committed; the readers live in `src/project-io/import/`
 and are exported from `@mmx/project-io/node` (they use `node:fs`, so they stay
 out of the renderer-safe `@mmx/project-io` entry).
 
+## Why Studio and mmx-engine, not the Bevy engine
+
+zero-x-mashup proved the idea in three steps:
+1. Python readers plus a pygame prototype.
+2. A Rust/Bevy engine, `zero_engine` (`engine/`), with native readers. It had
+   plugins for physics, combat, Pantheon AI and sound, and it reached sample
+   and pixel parity with the Python cache.
+3. Its features moved into mmx-engine (Zero loadout, Pantheon, stage music,
+   camera zones) and its readers into this Studio import.
+
+The Bevy engine is dropped in favour of mmx-engine + Studio:
+- **One engine:** mmx-engine already has the deterministic simulation, replays,
+  the browser build and Studio's Play. A second engine meant porting every
+  feature twice.
+- **The editor comes for free:** the imported Intro Highway is a normal Studio
+  project (levels, camera zones, image layers, enemies, bindings), so it can be
+  edited, played and exported like any other.
+- **The import runs where the user is:** a menu command in Studio replaces the
+  `build_cache.py` + converter-script chain. It reads the installs directly,
+  without Python.
+- **Same results:** the TS readers are checked against the same Python oracle
+  as the Rust ones (see [Oracle tests](#oracle-tests)).
+
+zero-x-mashup stays as the research lab: Python tools, notes, the oracle cache,
+and the QA screenshots in `qa/`. Its Rust engine and its `game/main.py` are
+superseded.
+
+## Legal route
+
+The import follows universal-modder "Pattern 4": reimplement, and read the
+user's own files.
+- Studio ships code only. It reads the games the user owns, in place, under the
+  located install roots, and never writes there. No ROM or game file is ever
+  extracted to disk; the MMX1 image lives only in memory.
+- No Capcom asset is in this repository. Tests use synthetic data, and the
+  oracle tests only run on a machine that has both the installs and the cache.
+- The imported project is Capcom-derived. The import writes a catch-all
+  `.gitignore` into it (`*`), and the repo ignores `zero-project/`. Keep the
+  project private: don't commit, publish or share it.
+- The formats were learned from MegaEdX (GPL-2.0), read for reference only, and
+  from our own research. No MegaEdX code is used.
+
 ## File → Import from Steam installs
 
 1. Install both games from Steam: Mega Man X Legacy Collection and Mega Man
@@ -364,7 +406,7 @@ the cropped frame. A duration is in 1/60 s; `0xFE` loops to step `frame`, and
 | `hit` | object 25, frames 15-16, 6/60 s each (the Stun lasts 12 frames); 17-19 and 14 are death debris | no |
 | `pantheon_shot` | object 1, script 4: frames 22, 23, 25, 24 at 4/60 s | yes |
 
-GBA frames face left (MODLOG gotcha 3).
+GBA frames face left (gotcha 3).
 
 **ARC v7** (`readArc`, used for the MMZ1 sound banks, e.g. `RZZC/romPC/Zero1SE.arc`):
 - header: `"ARC\0"`, u16 version 7, u16 count;
@@ -413,10 +455,151 @@ ZERO_X_MASHUP_ROOT=../zero-x-mashup pnpm test:oracle
 ```
 
 `pnpm test:oracle` runs only the `oracle:` tests of `tests/project-io/steam`,
-`mmx1` and `mmz1`. They also run in `pnpm test`.
+`mmx1`, `mmz1` and `zero-project`. The last one runs the whole import on the
+real installs and checks the generated project. They also run in `pnpm test`.
+
+What the oracle compares:
+
+| Reader | Compared with the Python cache |
+| --- | --- |
+| MMX1 | `stage.json` byte-identical (collision, spawn, cameras, backdrop); `stage.png` / `background.png` pixel-identical |
+| MMZ1 Zero | `zero.json` byte-identical (frames, anchors, scripts); `zero.png` pixel-identical |
+| MMZ1 objects 1/25 | not in the cache: matched once against `xz/tools/mmz_obj.py` (JSON and pixels identical); tests check the clip contract |
+| MS-ADPCM | ffmpeg on a synthetic chirp (`adpcm.test.ts`) |
 
 `ZERO_X_MASHUP_ROOT` defaults to `../zero-x-mashup`, relative to the repo
 root. Without an install or the cache (CI, other machines), each oracle test
 is skipped. It prints `[oracle] SKIPPED "<test>": <reason>`, naming the
 missing install or cache files and the `ZERO_X_MASHUP_ROOT` value, and reports
 as `# SKIP` with the same reason. The shared gate is `tests/project-io/oracle.ts`.
+
+## Gotchas
+
+Gotchas 1–4 are the numbers used in zero-x-mashup's MODLOG.
+
+1. **The MMX1 VRAM destination is 16-bit.** `(word << 1) - 0x2000` wraps on the
+   SNES side. Without `& 0xFFFF`, the main tile set lands past VRAM and most
+   tiles render as colour 0 (`vramDest`).
+2. **Only MMZ1 layout block 0 carries Zero's palettes.** Blocks without a
+   palette section reuse the previous block's (`loadStreamed`).
+3. **GBA frames face left.** Zero's sheet is mirrored, because the engine's
+   player sheets face right. The Pantheon sheet is not: the engine's enemy
+   sheets face left. The shot is mirrored like the player's shots.
+4. **The MS-ADPCM predictor divides by 256, rounding toward zero.** `>> 8`
+   floors negative values and drifts (`msAdpcmToPcmWav`).
+
+Others:
+- **Camera limit order.** The MMX1 checkpoint record stores the camera limits
+  after chX/chY, camX, camY, bkgX, bkgY in the order minX, maxX, minY, maxY.
+  MegaEdX's struct names suggest minX, minY, maxX, maxY, which is wrong.
+- **Two MMX1 US images.** RXC1.exe holds the MMX1 US image twice (v1.0 and
+  v1.1), plus the Japanese one. Only v1.0 (header version byte 0) is read.
+  Neither image's byte sum matches its header checksum: these are
+  collection-patched builds, so don't use the checksum to identify them.
+- **Pantheon `hit` clip.** It is frames 15–16 only. In object 25, frames 17–19
+  and 14 are death-debris pieces; 15 is the flinch pose and 16 the same with
+  the red head. The engine contract (mmx.ts#31) said frames 15–19, but the
+  browser check showed a debris piece during the Stun.
+- **The gap at x ≈ 800 is a real pit.** It is the broken highway edge. The
+  engine kills below the camera zone's bottom + 32, which matches MMX's
+  `max_y + 224 + 32`.
+- **Pantheon spawns.** They come from zero-x-mashup's `enemies.json`, placed by
+  eye, not from MMX1 data. Spawns outside the level are dropped: Studio froze on
+  out-of-bounds enemies (flagged separately).
+
+## Research notes (from zero-x-mashup MODLOG)
+
+**Installs** (under Steam `steamapps/common`):
+- Mega Man X Legacy Collection: `RXC1.exe` (24,229,288 bytes). Data is in
+  `nativeDX10/` (Common, RXC1, X4, XChallenge, XEmu, …). The collection's
+  `.arc` files hold native data only for X4–X6, X Challenge, the UI and sound;
+  X1–X3 are SNES images stored uncompressed inside RXC1.exe. The headers were
+  found by title: ROCKMAN X at 12148448 and 13721312, MEGAMAN X at 14245600 and
+  15818464 (exe offsets of the header, spaced 1,572,864 bytes = the MMX1 size).
+- Mega Man Zero/ZX Legacy Collection: `MZZXLC/MZZXLC.exe`, data in
+  `nativePCx64/RZZC/` (ZC, ZX, ZXA, romPC, DATA). There is no GBA ROM in the
+  exe or the arcs: each game is split into per-asset banks,
+  `RZZC/ZC/DATA/*_z{1..4}.bin` (z1 = MMZ1). Region copies of some banks are in
+  `DATA/USA` and `DATA/Europian`.
+
+**MMX1 collision bytes** seen in level 0:
+
+| Byte | Meaning |
+| --- | --- |
+| `0x00` | empty |
+| `0x34`, `0x35` | walkable top |
+| `0x3B` | solid |
+| `0x05`–`0x0C` | slopes |
+| `0x39`, `0x3A` | rare, also mapped to Solid |
+
+**MMX1 checkpoints of the Intro Highway:**
+- Checkpoints 0–2: camera Y locked at 256, X from 0 to 6912.
+- Checkpoint 3: Y locked at 768.
+- The background scrolls at camX / 2 (bkgX in the record) with bkgY 0. The
+  backdrop is palette colour 0 (dusk purple).
+
+**MMZ1 static objects** (z1):
+- Object 1: shared effects. Script 1 is the explosion, 2 a hit spark, 4 the
+  looping yellow shot.
+- Objects 2–160: the MMZ1 cast. Examples: 25 = Pantheon Hunter (scripts 0 idle,
+  1 walk, 2 aim, 3 shoot), Golem 67, Ciel 117–120.
+- obj_fnt object 0 is a table of 485 offsets. Entries 0–63 are 32 px-wide
+  stills (menu art, title Zero, Cyber-elf portraits); 64–483 are the streamed
+  characters.
+
+**MMZ1 streamed characters:**
+
+| Characters | Content |
+| --- | --- |
+| 0–56 | Zero's animations |
+| 57–69 | saber arcs |
+| 70 and up | cutscene and boss effects |
+
+Zero's animations used by `ZERO_MOVES`, plus ones not used yet:
+
+| Anim | Content |
+| --- | --- |
+| 0 | idle |
+| 2 | run |
+| 3 | dash (script 1 = dash end) |
+| 4 | jump (scripts 1 fall, 2 land) |
+| 5 | wall slide (s0 enter + loop, s1 arm-forward variant, s2 hold) |
+| 6 | wall jump (s0 kick, s1 dash kick) |
+| 7 | ladder (not used) |
+| 8, 10, 11 | saber combo 1–3 |
+| 13 | run + buster (not used) |
+| 14 | dash slash |
+| 16 | jump slash |
+| 17 | wall slash |
+| 18 | ladder slash (not used) |
+| 49 | hurt |
+
+**Music:**
+- MMZ1: `nativePCx64/sound/bgm/wav/zero1_bgm/*.sngw` are 29 plain Ogg Vorbis
+  tracks; `zero1_bgm005` plays in the first stage.
+- MMX1: `Common/sound/bgm/wav/X1/04_OPENING_STAGE.sngw` (the Intro Highway) is
+  scrambled. It is not a 4-byte XOR: the key `c1a53e7d` fits the first bytes,
+  but the rest is neither Ogg nor RIFF.
+
+**Timing:** reading both games takes about 40–60 ms in Rust and about 1 s for
+the whole TS import, PNG encoding included.
+
+## Open questions
+
+- **Zero's facing while wall-sliding.** The wall-slash arc says Zero faces the
+  wall, but the arm-forward slide variant (anim 5 script 1) suggests he faces
+  away. The Bevy engine had him face the wall; mmx-engine's Zero should be
+  checked against ground truth from the real MMZ1.
+- **Sound roles.** `ZERO_SOUNDS.sfx` was matched by ear against a recording of
+  the real game. The roles are not all verified (`wall_kick` is a likely
+  guess), and enemy hit, explosion and wall kick have no confirmed entry.
+- **MMX1 Intro music.** The track is scrambled (see above). Until it is
+  decoded, the stage plays the MMZ1 track.
+- **MMX1 stage scripting is not imported:** the collapsing road, Bee Blader,
+  Vile, and the other Intro Highway enemies. Only the Pantheons from the
+  design sheet are placed.
+- **Packaged app.** The import borrows from `templates/mmx-demo`, which the
+  packaged app (`out/**` only) doesn't ship, like the starter template.
+- **Pantheon details** left in the engine: the shot hitbox (a 4x4 guess), and
+  the reference's walk toward the player down to `keep_distance` 64 between
+  shots.
