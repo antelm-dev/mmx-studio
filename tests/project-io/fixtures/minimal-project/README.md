@@ -12,13 +12,16 @@ Layout:
 ```text
 tests/fixtures/minimal-project/
 ├── project.json
+├── game/
+│   └── data.json
 ├── levels/
 │   └── level.main.json
 └── assets/
     ├── sprites/
-    │   └── bg.png
+    │   ├── bg.png
+    │   └── player.png
     └── sounds/
         └── jump.wav
 ```
 
-Only `sprite.bg` is referenced by the level; `sfx.jump` is an intentional orphan for export exclusion tests.
+The level is playable (floor row + spawn). Sprites are referenced through `game/data.json` bindings (player sheet `sprite.player.fixture`, checked by the Play e2e); `sfx.jump` is an intentional orphan for export exclusion tests.

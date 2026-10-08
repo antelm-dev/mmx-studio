@@ -31,6 +31,7 @@ import {
 } from "../core/persistence.js";
 import { useUiStore } from "../store/uiStore.js";
 import { projectSession } from "../core/projectSession.js";
+import { starterAssets } from "../assets/studioAssets.js";
 import { EditorPlaytestController } from "./EditorPlaytestController.js";
 import { dispatchEditorKey, type KeyboardContext } from "./editorKeyboard.js";
 
@@ -73,6 +74,7 @@ export class EditorController {
     this.playtest = new EditorPlaytestController(this.store, {
       getHost: () => this.host,
       getFileAccess: () => this.fileAccess,
+      getAssets: () => projectSession.getAssets(),
       validate: () => this.store.validate(),
       toast: (msg) => this.toast(msg),
       focusObject: (id) => this.focusObject(id),
@@ -156,6 +158,16 @@ export class EditorController {
     this.viewport.redraw();
   }
 
+  /** Point the viewport at the current project's sprites (starter when none or invalid). */
+  private async applyProjectAssets(): Promise<void> {
+    const assets = (await projectSession.getAssets()) ?? starterAssets;
+    try {
+      await this.viewport?.setAssets(assets.catalog);
+    } catch (error) {
+      this.toast(`Could not load sprites: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
   detachViewport(): void {
     this.viewport?.destroy();
     this.viewport = null;
@@ -225,6 +237,7 @@ export class EditorController {
     if (!this.confirmDiscardIfDirty("Create a new project?")) return;
     if (this.store.get().mode === "play") this.togglePlay();
     const issues = await projectSession.createProject();
+    void this.applyProjectAssets();
     if (issues.some((issue) => issue.severity === "error")) {
       this.toast(`Create project failed: ${issues[0]?.message ?? "validation error"}`);
       return;
@@ -242,6 +255,7 @@ export class EditorController {
     if (!this.confirmDiscardIfDirty("Create a new project from the MMX starter template?")) return;
     if (this.store.get().mode === "play") this.togglePlay();
     const issues = await projectSession.createFromStarter();
+    void this.applyProjectAssets();
     if (issues.some((issue) => issue.severity === "error")) {
       this.toast(`Create starter project failed: ${issues[0]?.message ?? "validation error"}`);
       return;
@@ -261,6 +275,7 @@ export class EditorController {
     if (!this.confirmDiscardIfDirty("Open another project?")) return;
     if (this.store.get().mode === "play") this.togglePlay();
     const issues = await projectSession.openProject();
+    void this.applyProjectAssets();
     if (issues.some((issue) => issue.severity === "error")) {
       this.toast(`Open project failed: ${issues[0]?.message ?? "validation error"}`);
       return;

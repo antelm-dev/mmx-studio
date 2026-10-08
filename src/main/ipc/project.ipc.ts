@@ -1,10 +1,12 @@
-import { basename } from "node:path";
+import { basename, extname } from "node:path";
 import { dialog } from "electron";
 import { defineIpcModule, handle } from "electron-ipc-module";
 import type { AssetKind } from "@mmx/project-schema";
 import {
   createProject,
   exportProject,
+  GAME_DATA_FILE,
+  issue,
   importAsset,
   loadProject,
   mergeImportedAsset,
@@ -16,6 +18,21 @@ import {
 } from "@mmx/project-io";
 import { createNodeFileSystem } from "@mmx/project-io/node";
 import { copyStarterProjectToDirectory } from "@mmx/starter-template";
+
+const DATA_URL_MIME: Record<string, string> = {
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".webp": "image/webp",
+  ".gif": "image/gif",
+  ".wav": "audio/wav",
+  ".ogg": "audio/ogg",
+  ".mp3": "audio/mpeg",
+};
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
 
 export function createProjectIpc() {
   return defineIpcModule("project", {
@@ -96,6 +113,47 @@ export function createProjectIpc() {
         issues: loaded.issues,
       };
     }),
+
+    /**
+     * Reads what Play and the viewport need from an open project: `game/data.json`
+     * and every image/sound asset as a data URL. Data URLs keep absolute paths out
+     * of the renderer, and identical bytes give identical URLs, so sheets shared
+     * with the bundled starter do not clash in the renderer's sheet cache.
+     */
+    "read-play-assets": handle(
+      async (
+        _event,
+        rootPath: string,
+        // Inline shape: the bridge generator cannot reference external package types.
+        assets: { id: string; kind: string; path: string }[],
+      ): Promise<ProjectResult<{ gameData: unknown; urls: Record<string, string> }>> => {
+        const fs = createNodeFileSystem(rootPath);
+        const issues: ProjectIssue[] = [];
+        let gameData: unknown = null;
+        try {
+          gameData = JSON.parse(await fs.readText(GAME_DATA_FILE));
+        } catch (error) {
+          issues.push(
+            issue("play-assets.game-data", errorMessage(error), `/${GAME_DATA_FILE}`, "warning"),
+          );
+        }
+        const urls: Record<string, string> = {};
+        for (const [index, asset] of assets.entries()) {
+          if (asset.kind !== "image" && asset.kind !== "sprite" && asset.kind !== "sound") continue;
+          const mime = DATA_URL_MIME[extname(asset.path).toLowerCase()];
+          try {
+            if (!mime) throw new Error(`Unsupported file type '${asset.path}'.`);
+            const bytes = await fs.readBytes(asset.path);
+            urls[asset.id] = `data:${mime};base64,${Buffer.from(bytes).toString("base64")}`;
+          } catch (error) {
+            issues.push(
+              issue("play-assets.file", errorMessage(error), `/assets/${index}/path`, "warning"),
+            );
+          }
+        }
+        return { ok: true, value: { gameData, urls }, issues };
+      },
+    ),
 
     save: handle(
       async (

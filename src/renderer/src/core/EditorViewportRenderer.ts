@@ -96,7 +96,7 @@ export class EditorViewportRenderer {
   constructor(
     private readonly app: Application,
     private readonly store: EditorStore,
-    private readonly assets: AssetCatalog,
+    private assets: AssetCatalog,
   ) {
     this.labelStyle = new TextStyle({
       fontFamily: "Inter, system-ui, sans-serif",
@@ -113,6 +113,12 @@ export class EditorViewportRenderer {
     );
     this.app.stage.addChild(this.world);
   }
+
+  /** Swap the sprite source (the open project's catalog, or the starter fallback). */
+  setAssets(assets: AssetCatalog): void {
+    this.assets = assets;
+  }
+
 
   redraw(
     live: LivePreview,

@@ -3,16 +3,19 @@ import {
   buildRendererAssetManifestFromProject,
   createAssetCatalog,
   createRendererAssetResolver,
+  type AssetCatalog,
   type RendererAssetBindings,
+  type RendererAssetManifest,
   type ShotAnimManifest,
 } from "@mmx/renderer-pixi";
 import starterProjectJson from "../../../../templates/mmx-starter/project.json";
 import studioGameDataJson from "../../../../templates/mmx-starter/game/data.json";
 
-type StudioGameData = {
+/** The `game/data.json` bindings shape (mirrors build-tools `StudioGameDataFile`). */
+export type StudioGameData = {
   bindings: {
     playerAnimation: string;
-    playerPointingSheet: string;
+    playerPointingSheet?: string;
     sounds: Record<string, string>;
     enemyAnimations: Record<string, string>;
     pickupAnimations: Record<string, string>;
@@ -21,15 +24,23 @@ type StudioGameData = {
   };
 };
 
+/** Everything Play and the viewport resolve sprites, animations and sounds from. */
+export type StudioAssets = {
+  project: ProjectDocument;
+  manifest: RendererAssetManifest;
+  catalog: AssetCatalog;
+  soundBindings: Record<string, string>;
+  soundIds: string[];
+  resolveUrl: (asset: ProjectAsset) => string;
+};
+
+// Inlined as data URLs so they match the data URLs the project bridge returns for the same bytes.
 const bundledAssetUrls = import.meta.glob(
   "../../../../templates/mmx-starter/assets/**/*",
-  { eager: true, query: "?url", import: "default" },
+  { eager: true, query: "?url&inline", import: "default" },
 ) as Record<string, string>;
 
-export const studioProject = starterProjectJson as ProjectDocument;
-const studioGameData = studioGameDataJson as StudioGameData;
-
-export function resolveStudioAssetUrl(asset: ProjectAsset): string {
+function resolveStarterAssetUrl(asset: ProjectAsset): string {
   const suffix = `/templates/mmx-starter/${asset.path}`.replaceAll("\\", "/");
   const match = Object.entries(bundledAssetUrls).find(([sourcePath]) =>
     sourcePath.replaceAll("\\", "/").endsWith(suffix),
@@ -38,62 +49,84 @@ export function resolveStudioAssetUrl(asset: ProjectAsset): string {
   return match[1];
 }
 
-const playerAnimation = studioProject.assets.find(
-  (asset) => asset.id === studioGameData.bindings.playerAnimation,
-);
-if (!playerAnimation || playerAnimation.kind !== "animation" || !playerAnimation.sheetAssetId) {
-  throw new Error("Starter player animation is missing its sprite sheet binding.");
+/**
+ * Builds the renderer manifest and catalog for a project from its `game/data.json`
+ * bindings. Throws on missing or invalid bindings; callers report the message.
+ */
+export function buildStudioAssets(
+  project: ProjectDocument,
+  gameData: StudioGameData,
+  resolveUrl: (asset: ProjectAsset) => string,
+): StudioAssets {
+  const bindings = gameData?.bindings;
+  if (!bindings || typeof bindings !== "object") {
+    throw new Error("game/data.json has no 'bindings' object.");
+  }
+  const playerAnimation = project.assets.find((asset) => asset.id === bindings.playerAnimation);
+  if (!playerAnimation || playerAnimation.kind !== "animation" || !playerAnimation.sheetAssetId) {
+    throw new Error(
+      `Player animation '${bindings.playerAnimation}' is missing or has no sprite sheet binding.`,
+    );
+  }
+
+  const hud = bindings.hudSprites;
+  if (!hud?.xBar || !hud.hpFill || !hud.weaponBar) {
+    throw new Error("HUD sprite bindings must define xBar, hpFill and weaponBar.");
+  }
+
+  const sheetImages = Object.fromEntries(
+    project.assets
+      .filter((asset) => asset.kind === "image" || asset.kind === "sprite")
+      .map((asset) => [asset.id, asset.id]),
+  );
+  const shotBindings = bindings.shotAnimations ?? {};
+  const firstShotAnimation = Object.values(shotBindings)[0];
+  if (!firstShotAnimation) throw new Error("Shot animation bindings are empty.");
+
+  const rendererBindings: RendererAssetBindings = {
+    playerAnimation: bindings.playerAnimation,
+    playerSheetNormal: playerAnimation.sheetAssetId,
+    playerSheetPointing: bindings.playerPointingSheet,
+    enemyActors: { ...bindings.enemyAnimations },
+    pickupActors: { ...bindings.pickupAnimations },
+    shotAnimations: firstShotAnimation,
+    sheetImages,
+    hudSheets: {
+      xBar: hud.xBar,
+      hpFill: hud.hpFill,
+      weaponBar: hud.weaponBar,
+      weaponIconDarkArrow: hud.weaponIconDarkArrow,
+    },
+  };
+
+  const resolver = createRendererAssetResolver({ assets: project.assets, resolveUrl });
+  const shotAnims: ShotAnimManifest = { sheets: {}, animations: {} };
+  for (const [clipName, assetId] of Object.entries(shotBindings)) {
+    const asset = resolver.requireKind(assetId, ["animation"]);
+    const clip = asset.animations[clipName] ?? Object.values(asset.animations)[0];
+    if (!clip) throw new Error(`Shot animation '${assetId}' has no clips.`);
+    const sheet = asset.sheetAssetId ?? asset.id;
+    shotAnims.sheets[clipName] = resolver.sheetKey(sheet);
+    shotAnims.animations[clipName] = clip;
+  }
+
+  const manifest = buildRendererAssetManifestFromProject(project, rendererBindings, resolveUrl, {
+    shotAnims,
+  });
+  const soundBindings = { ...bindings.sounds };
+  return {
+    project,
+    manifest,
+    catalog: createAssetCatalog({ manifest }),
+    soundBindings,
+    soundIds: [...new Set(Object.values(soundBindings))],
+    resolveUrl,
+  };
 }
 
-const hud = studioGameData.bindings.hudSprites;
-if (!hud?.xBar || !hud.hpFill || !hud.weaponBar) {
-  throw new Error("Starter HUD sprite bindings are incomplete.");
-}
-
-const sheetImages = Object.fromEntries(
-  studioProject.assets
-    .filter((asset) => asset.kind === "image" || asset.kind === "sprite")
-    .map((asset) => [asset.id, asset.id]),
+/** Fallback used when no project is open. */
+export const starterAssets = buildStudioAssets(
+  starterProjectJson as ProjectDocument,
+  studioGameDataJson as StudioGameData,
+  resolveStarterAssetUrl,
 );
-const firstShotAnimation = Object.values(studioGameData.bindings.shotAnimations)[0];
-if (!firstShotAnimation) throw new Error("Starter shot animation bindings are empty.");
-
-const rendererBindings: RendererAssetBindings = {
-  playerAnimation: studioGameData.bindings.playerAnimation,
-  playerSheetNormal: playerAnimation.sheetAssetId,
-  playerSheetPointing: studioGameData.bindings.playerPointingSheet,
-  enemyActors: { ...studioGameData.bindings.enemyAnimations },
-  pickupActors: { ...studioGameData.bindings.pickupAnimations },
-  shotAnimations: firstShotAnimation,
-  sheetImages,
-  hudSheets: {
-    xBar: hud.xBar,
-    hpFill: hud.hpFill,
-    weaponBar: hud.weaponBar,
-    weaponIconDarkArrow: hud.weaponIconDarkArrow,
-  },
-};
-
-const resolver = createRendererAssetResolver({
-  assets: studioProject.assets,
-  resolveUrl: resolveStudioAssetUrl,
-});
-const shotAnims: ShotAnimManifest = { sheets: {}, animations: {} };
-for (const [clipName, assetId] of Object.entries(studioGameData.bindings.shotAnimations)) {
-  const asset = resolver.requireKind(assetId, ["animation"]);
-  const clip = asset.animations[clipName] ?? Object.values(asset.animations)[0];
-  if (!clip) throw new Error(`Starter shot animation '${assetId}' has no clips.`);
-  const sheet = asset.sheetAssetId ?? asset.id;
-  shotAnims.sheets[clipName] = resolver.sheetKey(sheet);
-  shotAnims.animations[clipName] = clip;
-}
-
-export const studioRendererManifest = buildRendererAssetManifestFromProject(
-  studioProject,
-  rendererBindings,
-  resolveStudioAssetUrl,
-  { shotAnims },
-);
-export const studioAssetCatalog = createAssetCatalog({ manifest: studioRendererManifest });
-export const studioSoundBindings = { ...studioGameData.bindings.sounds };
-export const studioSoundAssetIds = [...new Set(Object.values(studioSoundBindings))];
