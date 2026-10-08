@@ -19,6 +19,8 @@ const COLOR_BG = 0x05070d;
 export class EditorViewport {
   private readonly renderer: EditorViewportRenderer;
   private readonly interaction: EditorViewportInteraction;
+  private resizeObserver: ResizeObserver | null = null;
+  private destroyed = false;
   private onEmptyContextMenu: import("./EditorViewportRenderer.js").EmptyCellContextMenuHandler | null =
     null;
 
@@ -70,7 +72,8 @@ export class EditorViewport {
     await loadEditorAssets(starterAssets.catalog);
     const viewport = new EditorViewport(app, canvas, store);
     const resize = (): void => viewport.onResize(host);
-    new ResizeObserver(resize).observe(host);
+    viewport.resizeObserver = new ResizeObserver(resize);
+    viewport.resizeObserver.observe(host);
     resize();
     return viewport;
   }
@@ -143,6 +146,8 @@ export class EditorViewport {
   // ---------- Lifecycle ----------
 
   redraw(): void {
+    // `setAssets` resolves after an await and may land on a destroyed viewport.
+    if (this.destroyed) return;
     this.renderer.updateCursor(
       this.canvas,
       this.interaction.isPanning(),
@@ -175,6 +180,9 @@ export class EditorViewport {
   }
 
   destroy(): void {
+    this.destroyed = true;
+    this.resizeObserver?.disconnect();
+    this.interaction.destroy();
     this.app.destroy({ removeView: true }, { children: true });
   }
 }
