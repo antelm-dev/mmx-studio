@@ -1,6 +1,6 @@
 import { useMemo, useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { Plus, Search, X } from "lucide-react";
+import { Search, X } from "lucide-react";
 import {
   CATEGORY_LABELS,
   CATEGORY_ORDER,
@@ -9,7 +9,8 @@ import {
 } from "@mmx/content-schema";
 import { editor, useEditorSnapshot } from "../app/useEditor.js";
 import { useUiStore } from "../store/uiStore.js";
-import { itemCls, panel, scroll } from "../ui.js";
+import { ListRow, ListRowAdd } from "../ui/editor/list-row.js";
+import { Panel, PanelScroll } from "../ui/editor/panel.js";
 import { SpritePreview } from "./SpritePreview.js";
 
 const cat =
@@ -28,7 +29,7 @@ export function PalettePanel() {
   const setQuery = useUiStore((s) => s.setPaletteQuery);
 
   return (
-    <div className={panel}>
+    <Panel>
       <div className="flex items-center gap-2 h-9 mt-3 mx-3 mb-2 px-2.5 border border-border-strong rounded-lg bg-raised shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] transition-[border-color,box-shadow] duration-[120ms] focus-within:border-accent focus-within:shadow-[0_0_0_3px_rgba(59,130,246,0.12)]">
         <Search size={16} className="text-fg-3" />
         <input
@@ -49,7 +50,7 @@ export function PalettePanel() {
         )}
       </div>
       <PaletteList query={query} snap={snap} />
-    </div>
+    </Panel>
   );
 }
 
@@ -95,14 +96,14 @@ function PaletteList({
 
   if (rows.length === 0) {
     return (
-      <div className={scroll} ref={scrollRef}>
+      <PanelScroll ref={scrollRef}>
         <div className={emptyNote}>No objects match your search.</div>
-      </div>
+      </PanelScroll>
     );
   }
 
   return (
-    <div className={scroll} ref={scrollRef}>
+    <PanelScroll ref={scrollRef}>
       <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
         {virtualizer.getVirtualItems().map((v) => {
           const row = rows[v.index];
@@ -124,21 +125,19 @@ function PaletteList({
           const def = row.def;
           return (
             <div key={v.key} style={style}>
-              <button
-                className={itemCls(isActive(def.id))}
+              <ListRow
+                active={isActive(def.id)}
                 title={`Place ${def.name}`}
                 onClick={() => editor.selectPalette(def.id)}
               >
                 <SpritePreview definitionId={def.id} size={28} fallbackColor={def.editor.color} />
                 <span className={itemName}>{def.name}</span>
-                <span className="grid place-items-center w-6 h-6 rounded-md opacity-0 bg-raised text-fg-2 ring-1 ring-border group-hover:opacity-100 group-hover:text-accent transition-opacity">
-                  <Plus size={16} strokeWidth={2.5} />
-                </span>
-              </button>
+                <ListRowAdd />
+              </ListRow>
             </div>
           );
         })}
       </div>
-    </div>
+    </PanelScroll>
   );
 }
