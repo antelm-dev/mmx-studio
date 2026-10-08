@@ -8,6 +8,7 @@ import { describe, expect, it } from "vitest";
 import { loadProject } from "../../src/project-io/index.ts";
 import { createNodeFileSystem } from "../../src/project-io/node.ts";
 import {
+  cameraZones,
   cellSize,
   FEET_BELOW_CENTRE,
   introHighwayArt,
@@ -85,6 +86,28 @@ describe("zero-import level art", () => {
       ],
       backdrop: "#503808",
     });
+  });
+});
+
+describe("zero-import camera zones", () => {
+  // The Intro Highway's four checkpoints, as stage.json has them.
+  const cameras = [
+    { x: 128, min_x: 0, max_x: 6912, min_y: 256, max_y: 256 },
+    { x: 3649, min_x: 0, max_x: 6912, min_y: 256, max_y: 256 },
+    { x: 6767, min_x: 0, max_x: 6912, min_y: 256, max_y: 256 },
+    { x: 8208, min_x: 0, max_x: 7936, min_y: 768, max_y: 768 },
+  ];
+
+  it("bounds the 398x224 view by the limits, one zone per run of equal limits, clipped to the world", () => {
+    expect(cameraZones(cameras, 8192, 1024)).toEqual([
+      { id: "camera-checkpoint-0", definitionId: "camera-zone", x: 0, y: 256, width: 6912 + 398, height: 224 },
+      { id: "camera-checkpoint-3", definitionId: "camera-zone", x: 0, y: 768, width: 8192, height: 224 },
+    ]);
+  });
+
+  it("rejects overlapping sections", () => {
+    const overlapping = [cameras[0], { ...cameras[3], min_y: 300, max_y: 300 }];
+    expect(() => cameraZones(overlapping, 8192, 1024)).toThrow(/overlap/);
   });
 });
 

@@ -38,7 +38,7 @@ back to step `<frame>`; `0xff` ends it and holds the last step.
 ```text
 project.json                         manifest: player.loadout "player.zero", anim.player.zero + sprite.player.zero + borrowed assets
 game/data.json                       bindings: playerAnimation + borrowed fontUi/sounds/shotAnimations/hudSprites
-levels/level.intro-highway.json      schemaVersion 2 level document, with imageLayers + backdrop
+levels/level.intro-highway.json      schemaVersion 2 level document: spawn + camera zones, imageLayers + backdrop
 assets/images/{stage,background}.png the cache's art, copied as-is (image.stage, image.background)
 assets/sprites/player/zero.png       repacked sheet
 assets/sprites/player/zero_anims.json  { animations } (same clips as in project.json)
@@ -101,7 +101,38 @@ Death hides the player sprite and plays no clip. AirDash and DashJump reuse `das
 The slopes are 4-tile ramps rising 16 px (read from where the bytes sit in the grid:
 `05 06 07 08` climbs one row left to right, `0c 0b 0a 09` descends). The engine has no
 one-way tile, so walkable tops are solid. One `spawn` object sits at checkpoint 0's
-spawn `(128, 256)`; the Intro drops the player onto the road at y = 384.
+spawn `(128, 256)`; the Intro drops the player onto the road at y = 384. Only checkpoint
+0 gets one: the engine requires exactly one `spawn` (`spawn.count`) and has no checkpoint
+object, and `stage.json` keeps only the X of checkpoints 1-3. A death respawns at the
+level spawn.
+
+#### Camera zones
+
+`stage.json` `cameras[i]` holds checkpoint i's camera limits (`min_x`, `max_x`,
+`min_y`, `max_y`, read by `build_cache.py` in the ROM's real order after chX/chY, camX,
+camY, bkgX, bkgY). They bound the view's **top-left** corner; a `camera-zone` object
+bounds the whole view, so each becomes:
+
+```text
+x = min_x    width  = min(max_x + 398, level width)  - min_x     (398x224 = engine VIEW_WIDTH/VIEW_HEIGHT)
+y = min_y    height = min(max_y + 224, level height) - min_y
+```
+
+With that mapping the engine's pit rule (zone bottom + 32) lands where MMX's is
+(`max_y + 224 + 32`). Consecutive checkpoints with identical limits are one section and
+one zone (`camera-checkpoint-<first checkpoint>`): the engine binds the view to the zone
+the player is in, so cutting equal limits at each checkpoint X would only shove the view
+at every seam. The converter throws if two zones overlap, since the engine would then
+pick by hysteresis rather than by stage. Intro Highway today:
+
+| Zone | Checkpoints | Rect | Effect |
+| --- | --- | --- | --- |
+| `camera-checkpoint-0` | 0-2 | (0, 256) 7310x224 | Y locked at 256, X follows Zero |
+| `camera-checkpoint-3` | 3 | (0, 768) 8192x224 | the lower band, Y locked at 768 (checkpoint 3's X, 8208, lies past the 8192 px grid) |
+
+So the view holds Y = 256 along the road and does not follow jumps, and falling into the
+gap at x = 800 kills at y > 512 and respawns. Zero's screen X settles near 217, not
+MMX's 128: the engine's view is 398 wide and it adds its dead zone and look-ahead.
 
 The art becomes two `imageLayers`, both at (0, 0), plus the level `backdrop`:
 
@@ -113,7 +144,7 @@ The art becomes two `imageLayers`, both at (0, 0), plus the level `backdrop`:
 `backdrop` is palette colour 0 (`stage.json` `backdrop`) as `#rrggbb`; it fills
 whatever both images leave transparent.
 
-Not converted yet: the checkpoint camera limits (`cameras`), enemies.
+Not converted yet: enemies.
 
 ### Bindings
 
