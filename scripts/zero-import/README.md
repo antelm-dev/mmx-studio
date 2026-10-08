@@ -17,7 +17,8 @@ The output is Capcom-derived. Keep it outside the repo; the script also writes a
 catch-all `.gitignore` into it, and the repo ignores `zero-project/`. Nothing here adds
 a dependency: PNG read/write uses `node:zlib`.
 
-`zero_moves.json` is read from `<cache-dir>/../sheets/`; borrowed assets (see
+`zero_moves.json` and `sounds.json` are read from `<cache-dir>/../sheets/`; MMZ1 sounds from
+the MZZXLC install (see [Sounds](#sounds)); borrowed assets (see
 [Borrowed from the template](#borrowed-from-the-template)) from `templates/mmx-demo/`.
 
 ## Input: the cache
@@ -42,6 +43,8 @@ levels/level.intro-highway.json      schemaVersion 2 level document: spawn + cam
 assets/images/{stage,background}.png the cache's art, copied as-is (image.stage, image.background)
 assets/sprites/player/zero.png       repacked sheet
 assets/sprites/player/zero_anims.json  { animations } (same clips as in project.json)
+assets/sounds/zero/<id>.wav          MMZ1 effects decoded to 16-bit PCM (only with the MZZXLC install)
+assets/music/stage.ogg               MMZ1 stage music, declared as music.stage (only with the MZZXLC install)
 assets/{sprites/hud,sprites/effects,sounds,fonts}/...  copied from templates/mmx-demo
 ATTRIBUTION.md                       copied from templates/mmx-demo
 ```
@@ -167,5 +170,43 @@ these, so the script copies them from `templates/mmx-demo`:
   animation, as manifest entries with the template's ids and paths, and their files;
 - `ATTRIBUTION.md`.
 
-So Zero currently plays with X's sounds, buster shots/effects and HP bar. This is a
-stopgap until P5 brings MMZ sounds (and Zero's own HUD/effects); drop the borrowing then.
+Template sounds whose id an MMZ1 sound replaces (see [Sounds](#sounds)) are neither
+bound nor copied. So Zero currently plays with X's buster shots/effects, HP bar and the
+sounds MMZ1 does not map. This is a stopgap until Zero has his own HUD/effects.
+
+### Sounds
+
+Read from the user's Mega Man Zero/ZX Legacy Collection: `MZZXLC_DIR` if set, else the
+first Steam library (from `libraryfolders.vdf` under the default Steam folders) holding
+`steamapps/common/MZZXLC`. **Without it** the script prints a message and keeps every
+template sound, so the project still builds.
+
+- `nativePCx64/RZZC/romPC/Zero1SE.arc` is an MT Framework ARC v7 (`arcEntries`): 470
+  `sound\se\wav\...` entries, each a RIFF WAV in MS-ADPCM (~48 kHz stereo). `sounds.json`
+  `sfx.<role>` is an index into those wav entries. `msAdpcmToPcmWav` decodes to 16-bit
+  PCM WAV, ported from zero-x-mashup `engine/src/audio.rs`: the predictor is
+  `(s1 * c1 + s2 * c2) / 256` rounded toward zero (`>> 8` floors negatives and drifts).
+  Checked identical to `ffmpeg -f s16le` on all 470 entries; the unit tests use a
+  synthetic fixture, never a Capcom file.
+- `sounds.json` `music.file` (`zero1_bgm/zero1_bgm005.sngw`, the first stage) is plain Ogg
+  Vorbis, copied to `assets/music/stage.ogg` and declared as `music.stage` (kind `sound`).
+  The engine has no music binding yet, so nothing plays it. MMX1's own Intro music is
+  scrambled and out of scope.
+
+Role mapping, `sounds.json` role -> engine sound id (`SOUND_ROLES`; ids from
+`@mmx/browser-audio` `GAMEPLAY_SOUND_IDS` plus the optional `slash`):
+
+| Role | Entry | Sound id | Note |
+| --- | --- | --- | --- |
+| `slash` | 16 | `slash` | optional id, Zero's saber swing |
+| `dash` | 19 | `dash` | |
+| `land` | 13 | `land` | |
+| `buster_shot` | 17 | `lemon` | X's small buster shot id |
+| `hurt` | 21 | `damage` | |
+| `enemy_shot` | 71 | - | no engine id for enemy shots |
+| `wall_kick` | 19 | - | no id of its own: the engine plays `jump` on WallJump |
+
+The roles are still **guessed by ear** (matched against a recording of the real game,
+`sounds.json` `verified: false`); fix them in `sounds.json` and re-run. Every other id
+(`jump`, `wallslide`, `enemyHit`, `playerDeath`, ...) keeps the template sound; MMZ1's
+jumps are silent, but an unbound required id would break the build.
