@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { type CSSProperties, useEffect, useMemo, useRef } from "react";
 import { Grid3x3, Magnet, MousePointer2, Paintbrush } from "lucide-react";
 import {
   CATEGORY_LABELS,
@@ -8,10 +8,14 @@ import {
 } from "@mmx/content-schema";
 import { editor, useEditorSnapshot } from "../app/useEditor.js";
 import { useUiStore } from "../store/uiStore.js";
-import { cx, ctxItemCls, menu } from "../ui.js";
+import {
+  MenuContent,
+  MenuItem,
+  MenuLabel,
+  MenuRoot,
+  MenuSeparator,
+} from "../ui/primitives/menu.js";
 import { PlaytestDebugger } from "./PlaytestDebugger.js";
-
-const ctxCat = "text-[10px] uppercase tracking-[0.5px] text-muted pt-2 px-3 pb-0.5";
 
 interface PlaceGroup {
   category: string;
@@ -53,23 +57,6 @@ export function Viewport() {
       })).filter((g) => g.defs.length > 0),
     [],
   );
-
-  const menuPos = useMemo(() => {
-    if (!contextMenu) return null;
-    const menuW = 220;
-    const menuH = 420;
-    return {
-      ...contextMenu,
-      clientX: Math.max(8, Math.min(contextMenu.clientX, window.innerWidth - menuW - 8)),
-      clientY: Math.max(
-        8,
-        Math.min(
-          contextMenu.clientY,
-          window.innerHeight - Math.min(menuH, window.innerHeight - 16) - 8,
-        ),
-      ),
-    };
-  }, [contextMenu]);
 
   return (
     <div className="relative h-full min-h-0 bg-[radial-gradient(circle_at_50%_35%,#111a29_0%,#06090f_55%,#04060a_100%)]">
@@ -116,98 +103,84 @@ export function Viewport() {
         {mode === "play" && <PlaytestDebugger />}
       </div>
 
-      {menuPos && (
-        <>
-          <div
-            className="fixed inset-0 z-40"
-            onPointerDown={(e) => {
-              if (e.button !== 2) editor.closeEmptyContextMenu();
-            }}
-            onContextMenu={(e) => {
-              e.preventDefault();
-              editor.openEmptyContextMenuAt(e.clientX, e.clientY);
-            }}
-          />
-          <div
-            className={cx(menu, "fixed max-h-[min(420px,calc(100vh-16px))]")}
-            style={{ left: menuPos.clientX, top: menuPos.clientY }}
-            onPointerDown={(e) => e.stopPropagation()}
-          >
-            <div className="font-mono text-[10px] text-muted pt-1 px-3 pb-1.5">
-              Cell {menuPos.col}, {menuPos.row}
-            </div>
-            <div className="text-[10px] uppercase tracking-[0.5px] text-muted pt-1 px-3 pb-0.5">
-              Terrain
-            </div>
-            {menuPos.tileSolid ? (
-              <button className={ctxItemCls()} onClick={() => editor.setTileAtContext(false)}>
-                <span className="w-3 h-3 rounded-[3px] flex-none border border-[#ff5a5a]" />
-                <span>Remove solid tile</span>
-              </button>
-            ) : (
-              <button className={ctxItemCls()} onClick={() => editor.setTileAtContext(true)}>
-                <span className="w-3 h-3 rounded-[3px] flex-none bg-[#33507a] shadow-[0_0_0_1px_rgba(255,255,255,0.15)]" />
-                <span>Add solid tile</span>
-              </button>
-            )}
-            <div className="h-px bg-popover-border my-1" />
-            <div className="text-[10px] uppercase tracking-[0.5px] text-muted pt-1 px-3 pb-0.5">
-              Place
-            </div>
-            <div className="overflow-y-auto min-h-0 max-h-[260px]">
-              {placeGroups.map((group) => (
-                <div key={group.category}>
-                  <div className={ctxCat}>{group.label}</div>
-                  {group.defs.map((def) => (
-                    <button
-                      key={def.id}
-                      className={ctxItemCls()}
-                      onClick={() => editor.placeAtContext(def.id)}
-                    >
-                      <span
-                        className="w-3 h-3 rounded-[3px] flex-none shadow-[0_0_0_1px_rgba(255,255,255,0.15)]"
-                        style={{ background: def.editor.color }}
-                      />
-                      <span>
+      <MenuRoot
+        lazyMount
+        unmountOnExit
+        open={!!contextMenu}
+        // zag ignores a controlled `anchorPoint`; a virtual anchor rect places the menu at the click.
+        positioning={{
+          placement: "bottom-start",
+          getAnchorRect: () =>
+            contextMenu && { x: contextMenu.clientX, y: contextMenu.clientY, width: 0, height: 0 },
+        }}
+        // Escape belongs to the menu, not the editor (which would also clear the selection).
+        onEscapeKeyDown={(e) => e.stopPropagation()}
+        onOpenChange={({ open }) => {
+          if (!open) editor.closeEmptyContextMenu();
+        }}
+      >
+        <MenuContent maxH="min(420px, calc(100vh - 16px))">
+          {contextMenu && (
+            <>
+              <MenuLabel fontFamily="mono" textTransform="none" letterSpacing="normal" pb="1.5">
+                Cell {contextMenu.col}, {contextMenu.row}
+              </MenuLabel>
+              <MenuLabel>Terrain</MenuLabel>
+              {contextMenu.tileSolid ? (
+                <MenuItem value="tile-remove" onSelect={() => editor.setTileAtContext(false)}>
+                  <Swatch style={{ border: "1px solid #ff5a5a" }} />
+                  Remove solid tile
+                </MenuItem>
+              ) : (
+                <MenuItem value="tile-add" onSelect={() => editor.setTileAtContext(true)}>
+                  <Swatch style={{ background: "#33507a", boxShadow: SWATCH_RING }} />
+                  Add solid tile
+                </MenuItem>
+              )}
+              <MenuSeparator />
+              <MenuLabel>Place</MenuLabel>
+              <div style={{ overflowY: "auto", minHeight: 0, maxHeight: 260 }}>
+                {placeGroups.map((group) => (
+                  <div key={group.category}>
+                    <MenuLabel pt="2">{group.label}</MenuLabel>
+                    {group.defs.map((def) => (
+                      <MenuItem
+                        key={def.id}
+                        value={`place:${def.id}`}
+                        onSelect={() => editor.placeAtContext(def.id)}
+                      >
+                        <Swatch style={{ background: def.editor.color, boxShadow: SWATCH_RING }} />
                         {def.icon} {def.name}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              ))}
-            </div>
-            <div className="h-px bg-popover-border my-1" />
-            <button
-              className={ctxItemCls()}
-              onClick={() => {
-                editor.store.clearSelection();
-                editor.closeEmptyContextMenu();
-              }}
-            >
-              Clear selection
-            </button>
-            <button
-              className={ctxItemCls()}
-              onClick={() => {
-                editor.toggleGrid();
-                editor.closeEmptyContextMenu();
-              }}
-            >
-              {snap.state.gridVisible ? "Hide grid" : "Show grid"}
-            </button>
-            <button
-              className={ctxItemCls()}
-              onClick={() => {
-                editor.toggleSnap();
-                editor.closeEmptyContextMenu();
-              }}
-            >
-              {snap.state.snapEnabled ? "Disable snap" : "Enable snap"}
-            </button>
-          </div>
-        </>
-      )}
+                      </MenuItem>
+                    ))}
+                  </div>
+                ))}
+              </div>
+              <MenuSeparator />
+              <MenuItem value="clear-selection" onSelect={() => editor.store.clearSelection()}>
+                Clear selection
+              </MenuItem>
+              <MenuItem value="grid" onSelect={() => editor.toggleGrid()}>
+                {snap.state.gridVisible ? "Hide grid" : "Show grid"}
+              </MenuItem>
+              <MenuItem value="snap" onSelect={() => editor.toggleSnap()}>
+                {snap.state.snapEnabled ? "Disable snap" : "Enable snap"}
+              </MenuItem>
+            </>
+          )}
+        </MenuContent>
+      </MenuRoot>
     </div>
+  );
+}
+
+const SWATCH_RING = "0 0 0 1px rgba(255,255,255,0.15)";
+
+function Swatch({ style }: { style: CSSProperties }) {
+  return (
+    <span
+      style={{ width: 12, height: 12, borderRadius: 3, flex: "none", boxSizing: "border-box", ...style }}
+    />
   );
 }
 

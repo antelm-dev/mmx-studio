@@ -1,6 +1,5 @@
 import { type ReactElement, useEffect, useMemo, useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import * as ContextMenu from "@radix-ui/react-context-menu";
 import { ChevronDown, ChevronRight, Copy, Crosshair, Trash2, X } from "lucide-react";
 import {
   CATEGORY_LABELS,
@@ -16,12 +15,15 @@ import type { DockviewPanelApi } from "dockview-react";
 import { editor, useEditorSnapshot } from "../app/useEditor.js";
 import { selectedDecorationIds, selectedObjectIds } from "../core/EditorStore.js";
 import { useUiStore } from "../store/uiStore.js";
-import { cx, ctxItemCls, itemCls, menu, panel, scroll, sectionTitle } from "../ui.js";
+import { cx, itemCls, panel, scroll, sectionTitle } from "../ui.js";
+import {
+  MenuContent,
+  MenuContextTrigger,
+  MenuItem,
+  MenuRoot,
+  MenuSeparator,
+} from "../ui/primitives/menu.js";
 import { SpritePreview } from "./SpritePreview.js";
-
-const ctxDangerItem =
-  "flex items-center gap-[9px] w-full text-[12.5px] text-left px-3 py-1.5 cursor-pointer outline-none " +
-  "text-danger-fg hover:bg-danger hover:text-white data-[highlighted]:bg-danger data-[highlighted]:text-white";
 
 const cat =
   "flex items-end text-[9.5px] uppercase tracking-[0.7px] text-fg-2 pt-[14px] px-3.5 pb-[5px] font-extrabold";
@@ -72,39 +74,52 @@ function SceneRowMenu({
   children: ReactElement;
 }) {
   const many = selectedCount > 1;
+  const rowRef = useRef<HTMLElement>(null);
   return (
-    <ContextMenu.Root
-      onOpenChange={(open) => {
-        const ids = selectedObjectIds(editor.store.get().selection);
-        if (open && !ids.includes(inst.id)) {
-          editor.store.selectObjects([inst.id]);
+    <MenuRoot
+      lazyMount
+      unmountOnExit
+      // Escape belongs to the menu, not the editor (which would also clear the selection).
+      onEscapeKeyDown={(e) => e.stopPropagation()}
+      onOpenChange={({ open }) => {
+        if (open) {
+          const ids = selectedObjectIds(editor.store.get().selection);
+          if (!ids.includes(inst.id)) editor.store.selectObjects([inst.id]);
+          return;
+        }
+        // Context menus skip focus return; hand it back to the row unless the user already moved it.
+        const active = document.activeElement;
+        if (!active || active === document.body || active.closest("[role=menu]")) {
+          rowRef.current?.focus({ preventScroll: true });
         }
       }}
     >
-      <ContextMenu.Trigger asChild>{children}</ContextMenu.Trigger>
-      <ContextMenu.Portal>
-        <ContextMenu.Content className={menu} onCloseAutoFocus={(e) => e.preventDefault()}>
-          <ContextMenu.Item className={ctxItemCls()} onSelect={() => editor.focusObject(inst.id)}>
-            <Crosshair size={14} /> Focus in viewport
-          </ContextMenu.Item>
-          <ContextMenu.Item className={ctxItemCls()} onSelect={() => editor.duplicateSelection()}>
-            <Copy size={14} /> {many ? `Duplicate ${selectedCount} objects` : "Duplicate"}
-          </ContextMenu.Item>
-          {many && (
-            <ContextMenu.Item
-              className={ctxItemCls()}
-              onSelect={() => editor.store.clearSelection()}
-            >
-              <X size={14} /> Clear selection
-            </ContextMenu.Item>
-          )}
-          <ContextMenu.Separator className="h-px bg-popover-border my-1" />
-          <ContextMenu.Item className={ctxDangerItem} onSelect={() => editor.deleteSelection()}>
-            <Trash2 size={14} /> {many ? `Delete ${selectedCount} objects` : "Delete"}
-          </ContextMenu.Item>
-        </ContextMenu.Content>
-      </ContextMenu.Portal>
-    </ContextMenu.Root>
+      <MenuContextTrigger asChild ref={rowRef}>
+        {children}
+      </MenuContextTrigger>
+      <MenuContent>
+        <MenuItem value="focus" onSelect={() => editor.focusObject(inst.id)}>
+          <Crosshair size={14} /> Focus in viewport
+        </MenuItem>
+        <MenuItem value="duplicate" onSelect={() => editor.duplicateSelection()}>
+          <Copy size={14} /> {many ? `Duplicate ${selectedCount} objects` : "Duplicate"}
+        </MenuItem>
+        {many && (
+          <MenuItem value="clear" onSelect={() => editor.store.clearSelection()}>
+            <X size={14} /> Clear selection
+          </MenuItem>
+        )}
+        <MenuSeparator />
+        <MenuItem
+          value="delete"
+          color="studio.dangerFg"
+          _highlighted={{ bg: "studio.danger", color: "white" }}
+          onSelect={() => editor.deleteSelection()}
+        >
+          <Trash2 size={14} /> {many ? `Delete ${selectedCount} objects` : "Delete"}
+        </MenuItem>
+      </MenuContent>
+    </MenuRoot>
   );
 }
 
