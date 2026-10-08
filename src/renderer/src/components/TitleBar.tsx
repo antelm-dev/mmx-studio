@@ -1,7 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import {
-  Check,
   ClipboardCopy,
   Code2,
   Copy,
@@ -29,7 +27,17 @@ import {
 import { PANELS, resetLayout, togglePanel, useOpenPanelIds } from "../app/dock.js";
 import { editor, useEditorSnapshot, useProjectSession } from "../app/useEditor.js";
 import { useUiStore } from "../store/uiStore.js";
-import { cx, ctxItemCls, menu, menuLabel, menuSep, menuShortcut } from "../ui.js";
+import { cx } from "../ui.js";
+import {
+  MenuCheckboxItem,
+  MenuContent,
+  MenuGroup,
+  MenuItem,
+  MenuRoot,
+  MenuSeparator,
+  MenuShortcut,
+  MenuTrigger,
+} from "../ui/primitives/menu.js";
 
 const controls = () => window.studio?.window;
 
@@ -108,39 +116,41 @@ function FileMenu() {
   const hasRecovery = editor.hasRecoveryDraft();
 
   return (
-    <MenuRoot label="File" ariaLabel="File menu">
-      <DropdownMenu.Label className={menuLabel}>Project</DropdownMenu.Label>
-      <DropdownMenu.Item className={ctxItemCls(false)} onSelect={() => void editor.createProject()}>
-        <FolderKanban size={13} /> New Project…
-      </DropdownMenu.Item>
-      <DropdownMenu.Item className={ctxItemCls(false)} onSelect={() => void editor.createFromStarter()}>
-        <LayoutTemplate size={13} /> New from MMX Starter…
-      </DropdownMenu.Item>
-      <DropdownMenu.Item className={ctxItemCls(false)} onSelect={() => void editor.openProject()}>
-        <FolderOpen size={13} /> Open Project…
-      </DropdownMenu.Item>
-      <DropdownMenu.Item className={ctxItemCls(false)} onSelect={() => void editor.importFromSteam()}>
-        <Download size={13} /> Import from Steam installs…
-      </DropdownMenu.Item>
-      <DropdownMenu.Item
-        className={ctxItemCls(!project.open)}
-        disabled={!project.open}
-        onSelect={() => void editor.exportProject()}
-      >
-        <Share2 size={13} /> Export Project…
-      </DropdownMenu.Item>
-      <DropdownMenu.Separator className={menuSep} />
-      <DropdownMenu.Label className={menuLabel}>Level</DropdownMenu.Label>
-      <DropdownMenu.Item className={ctxItemCls(false)} onSelect={() => editor.newLevel()}>
-        <FilePlus2 size={13} /> New Level
-        <span className={menuShortcut}>{modLabel}+N</span>
-      </DropdownMenu.Item>
-      <DropdownMenu.Item className={ctxItemCls(false)} onSelect={() => void editor.openLevel()}>
-        <FolderOpen size={13} /> Open…
-        <span className={menuShortcut}>{modLabel}+O</span>
-      </DropdownMenu.Item>
-      <DropdownMenu.Separator className={menuSep} />
-      <DropdownMenu.Item className={ctxItemCls(false)} onSelect={() => editor.save()}>
+    <TitleMenu label="File" ariaLabel="File menu">
+      <MenuGroup label="Project">
+        <MenuItem value="new-project" onSelect={() => void editor.createProject()}>
+          <FolderKanban size={13} /> New Project…
+        </MenuItem>
+        <MenuItem value="new-from-starter" onSelect={() => void editor.createFromStarter()}>
+          <LayoutTemplate size={13} /> New from MMX Starter…
+        </MenuItem>
+        <MenuItem value="open-project" onSelect={() => void editor.openProject()}>
+          <FolderOpen size={13} /> Open Project…
+        </MenuItem>
+        <MenuItem value="import-steam" onSelect={() => void editor.importFromSteam()}>
+          <Download size={13} /> Import from Steam installs…
+        </MenuItem>
+        <MenuItem
+          value="export-project"
+          disabled={!project.open}
+          onSelect={() => void editor.exportProject()}
+        >
+          <Share2 size={13} /> Export Project…
+        </MenuItem>
+      </MenuGroup>
+      <MenuSeparator />
+      <MenuGroup label="Level">
+        <MenuItem value="new-level" onSelect={() => editor.newLevel()}>
+          <FilePlus2 size={13} /> New Level
+          <MenuShortcut>{modLabel}+N</MenuShortcut>
+        </MenuItem>
+        <MenuItem value="open-level" onSelect={() => void editor.openLevel()}>
+          <FolderOpen size={13} /> Open…
+          <MenuShortcut>{modLabel}+O</MenuShortcut>
+        </MenuItem>
+      </MenuGroup>
+      <MenuSeparator />
+      <MenuItem value="save" onSelect={() => editor.save()}>
         <Save size={13} /> Save
         {snap.dirty && (
           <span
@@ -148,26 +158,20 @@ function FileMenu() {
             aria-label="Unsaved changes"
           />
         )}
-        <span className={menuShortcut}>{modLabel}+S</span>
-      </DropdownMenu.Item>
-      <DropdownMenu.Item
-        className={ctxItemCls(false)}
-        onSelect={() => void editor.copyDocumentJson()}
-      >
+        <MenuShortcut>{modLabel}+S</MenuShortcut>
+      </MenuItem>
+      <MenuItem value="copy-json" onSelect={() => void editor.copyDocumentJson()}>
         <ClipboardCopy size={13} /> Copy JSON
-      </DropdownMenu.Item>
+      </MenuItem>
       {hasRecovery && (
         <>
-          <DropdownMenu.Separator className={menuSep} />
-          <DropdownMenu.Item
-            className={ctxItemCls(false)}
-            onSelect={() => editor.restoreRecovery()}
-          >
+          <MenuSeparator />
+          <MenuItem value="restore-recovery" onSelect={() => editor.restoreRecovery()}>
             <History size={13} /> Restore Recovery Draft…
-          </DropdownMenu.Item>
+          </MenuItem>
         </>
       )}
-    </MenuRoot>
+    </TitleMenu>
   );
 }
 
@@ -180,113 +184,110 @@ function ViewMenu() {
   const zoomPercent = Math.round(snap.state.zoom * 100);
 
   return (
-    <MenuRoot label="View" ariaLabel="View menu">
-      <DropdownMenu.Label className={menuLabel}>Appearance</DropdownMenu.Label>
-      <DropdownMenu.CheckboxItem
-        className={ctxItemCls(false)}
-        checked={colorTheme === "dark"}
-        onSelect={(e) => e.preventDefault()}
-        onCheckedChange={(checked) => setColorTheme(checked ? "dark" : "light")}
-      >
-        <CheckSlot />
-        <Moon size={13} /> Dark theme
-      </DropdownMenu.CheckboxItem>
-      <DropdownMenu.CheckboxItem
-        className={ctxItemCls(false)}
-        checked={fullscreen}
-        onCheckedChange={() => void controls()?.toggleFullscreen()}
-      >
-        <CheckSlot />
-        <Maximize2 size={13} /> Fullscreen
-        <span className={menuShortcut}>F11</span>
-      </DropdownMenu.CheckboxItem>
-
-      <DropdownMenu.Separator className={menuSep} />
-      <DropdownMenu.Label className={menuLabel}>Canvas</DropdownMenu.Label>
-      <DropdownMenu.CheckboxItem
-        className={ctxItemCls(false)}
-        checked={snap.state.gridVisible}
-        onSelect={(e) => e.preventDefault()}
-        onCheckedChange={() => editor.toggleGrid()}
-      >
-        <CheckSlot />
-        <Grid3x3 size={13} /> Grid
-        <span className={menuShortcut}>G</span>
-      </DropdownMenu.CheckboxItem>
-      <DropdownMenu.CheckboxItem
-        className={ctxItemCls(false)}
-        checked={snap.state.snapEnabled}
-        onSelect={(e) => e.preventDefault()}
-        onCheckedChange={() => editor.toggleSnap()}
-      >
-        <CheckSlot />
-        <Magnet size={13} /> Snap
-        <span className={menuShortcut}>⇧G</span>
-      </DropdownMenu.CheckboxItem>
-
-      <DropdownMenu.Separator className={menuSep} />
-      <DropdownMenu.Label className={menuLabel}>Zoom · {zoomPercent}%</DropdownMenu.Label>
-      <DropdownMenu.Item className={ctxItemCls(false)} onSelect={() => editor.zoomIn()}>
-        <ZoomIn size={13} /> Zoom In
-        <span className={menuShortcut}>{modLabel}+=</span>
-      </DropdownMenu.Item>
-      <DropdownMenu.Item className={ctxItemCls(false)} onSelect={() => editor.zoomOut()}>
-        <ZoomOut size={13} /> Zoom Out
-        <span className={menuShortcut}>{modLabel}+−</span>
-      </DropdownMenu.Item>
-      <DropdownMenu.Item className={ctxItemCls(false)} onSelect={() => editor.setZoom(1)}>
-        <RotateCcw size={13} /> Zoom 100%
-        <span className={menuShortcut}>{modLabel}+0</span>
-      </DropdownMenu.Item>
-      <DropdownMenu.Item className={ctxItemCls(false)} onSelect={() => editor.fit()}>
-        <Maximize size={13} /> Fit to View
-        <span className={menuShortcut}>F</span>
-      </DropdownMenu.Item>
-
-      <DropdownMenu.Separator className={menuSep} />
-      <DropdownMenu.Label className={menuLabel}>Panels</DropdownMenu.Label>
-      {PANELS.map((p) => (
-        <DropdownMenu.CheckboxItem
-          key={p.id}
-          className={ctxItemCls(false)}
-          checked={open.includes(p.id)}
-          onSelect={(e) => e.preventDefault()}
-          onCheckedChange={() => togglePanel(p.id)}
+    <TitleMenu label="View" ariaLabel="View menu">
+      <MenuGroup label="Appearance">
+        <MenuCheckboxItem
+          value="dark-theme"
+          closeOnSelect={false}
+          checked={colorTheme === "dark"}
+          onCheckedChange={(checked) => setColorTheme(checked ? "dark" : "light")}
         >
-          <CheckSlot />
-          {p.title}
-        </DropdownMenu.CheckboxItem>
-      ))}
+          <Moon size={13} /> Dark theme
+        </MenuCheckboxItem>
+        <MenuCheckboxItem
+          value="fullscreen"
+          checked={fullscreen}
+          onCheckedChange={() => void controls()?.toggleFullscreen()}
+        >
+          <Maximize2 size={13} /> Fullscreen
+          <MenuShortcut>F11</MenuShortcut>
+        </MenuCheckboxItem>
+      </MenuGroup>
 
-      <DropdownMenu.Separator className={menuSep} />
-      <DropdownMenu.Item
-        className={ctxItemCls(false)}
+      <MenuSeparator />
+      <MenuGroup label="Canvas">
+        <MenuCheckboxItem
+          value="grid"
+          closeOnSelect={false}
+          checked={snap.state.gridVisible}
+          onCheckedChange={() => editor.toggleGrid()}
+        >
+          <Grid3x3 size={13} /> Grid
+          <MenuShortcut>G</MenuShortcut>
+        </MenuCheckboxItem>
+        <MenuCheckboxItem
+          value="snap"
+          closeOnSelect={false}
+          checked={snap.state.snapEnabled}
+          onCheckedChange={() => editor.toggleSnap()}
+        >
+          <Magnet size={13} /> Snap
+          <MenuShortcut>⇧G</MenuShortcut>
+        </MenuCheckboxItem>
+      </MenuGroup>
+
+      <MenuSeparator />
+      <MenuGroup label={`Zoom · ${zoomPercent}%`}>
+        <MenuItem value="zoom-in" onSelect={() => editor.zoomIn()}>
+          <ZoomIn size={13} /> Zoom In
+          <MenuShortcut>{modLabel}+=</MenuShortcut>
+        </MenuItem>
+        <MenuItem value="zoom-out" onSelect={() => editor.zoomOut()}>
+          <ZoomOut size={13} /> Zoom Out
+          <MenuShortcut>{modLabel}+−</MenuShortcut>
+        </MenuItem>
+        <MenuItem value="zoom-100" onSelect={() => editor.setZoom(1)}>
+          <RotateCcw size={13} /> Zoom 100%
+          <MenuShortcut>{modLabel}+0</MenuShortcut>
+        </MenuItem>
+        <MenuItem value="fit" onSelect={() => editor.fit()}>
+          <Maximize size={13} /> Fit to View
+          <MenuShortcut>F</MenuShortcut>
+        </MenuItem>
+      </MenuGroup>
+
+      <MenuSeparator />
+      <MenuGroup label="Panels">
+        {PANELS.map((p) => (
+          <MenuCheckboxItem
+            key={p.id}
+            value={`panel-${p.id}`}
+            closeOnSelect={false}
+            checked={open.includes(p.id)}
+            onCheckedChange={() => togglePanel(p.id)}
+          >
+            {p.title}
+          </MenuCheckboxItem>
+        ))}
+      </MenuGroup>
+
+      <MenuSeparator />
+      <MenuItem
+        value="reset-layout"
         onSelect={() => {
           resetLayout();
           editor.toast("Layout reset.");
         }}
       >
         <LayoutTemplate size={13} /> Reset Layout
-      </DropdownMenu.Item>
-    </MenuRoot>
+      </MenuItem>
+    </TitleMenu>
   );
 }
 
 function HelpMenu() {
   return (
-    <MenuRoot label="Help" ariaLabel="Help menu">
-      <DropdownMenu.Item
-        className={ctxItemCls(false)}
-        onSelect={() => void controls()?.toggleDevTools()}
-      >
+    <TitleMenu label="Help" ariaLabel="Help menu">
+      <MenuItem value="toggle-devtools" onSelect={() => void controls()?.toggleDevTools()}>
         <Code2 size={13} /> Toggle Developer Tools
-        <span className={menuShortcut}>{modLabel}+Shift+I</span>
-      </DropdownMenu.Item>
-    </MenuRoot>
+        <MenuShortcut>{modLabel}+Shift+I</MenuShortcut>
+      </MenuItem>
+    </TitleMenu>
   );
 }
 
-function MenuRoot({
+// Plain dropdowns, not a menubar: as before, hovering another trigger while one is open does not switch menus.
+function TitleMenu({
   label,
   ariaLabel,
   children,
@@ -296,31 +297,17 @@ function MenuRoot({
   children: ReactNode;
 }>) {
   return (
-    <DropdownMenu.Root>
-      <DropdownMenu.Trigger asChild>
+    <MenuRoot positioning={{ placement: "bottom-start", gutter: 2 }}>
+      <MenuTrigger asChild>
         <button
           className="inline-flex items-center h-full px-2.5 text-[11.5px] font-medium text-fg-3 hover:bg-hover hover:text-fg data-[state=open]:bg-hover data-[state=open]:text-fg transition-colors duration-100"
           aria-label={ariaLabel}
         >
           {label}
         </button>
-      </DropdownMenu.Trigger>
-      <DropdownMenu.Portal>
-        <DropdownMenu.Content className={menu} sideOffset={2} align="start">
-          {children}
-        </DropdownMenu.Content>
-      </DropdownMenu.Portal>
-    </DropdownMenu.Root>
-  );
-}
-
-function CheckSlot() {
-  return (
-    <span className="inline-flex w-3.5 justify-center flex-none">
-      <DropdownMenu.ItemIndicator>
-        <Check size={13} />
-      </DropdownMenu.ItemIndicator>
-    </span>
+      </MenuTrigger>
+      <MenuContent overflowY="auto">{children}</MenuContent>
+    </MenuRoot>
   );
 }
 
