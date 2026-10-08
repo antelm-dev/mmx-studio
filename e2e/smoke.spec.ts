@@ -155,7 +155,26 @@ test("renders non-empty palette sprite previews", async () => {
       .toBeGreaterThan(0);
   }
 
+  // A loaded image can still be laid out outside its 28px box: the centre of the box must show the sprite.
+  const spawn = page.locator('[title="spawn"]').first();
+  const b = (await spawn.boundingBox())!;
+  // Middle third: clear of the rounded corners and ring, which differ from the background on their own.
+  const clip = { x: b.x + b.width / 3, y: b.y + b.height / 3, width: b.width / 3, height: b.height / 3 };
+  await expect.poll(async () => distinctColors(await page.screenshot({ clip }))).toBeGreaterThan(1);
 });
+
+/** Distinct colours in a PNG (a blank box has one). */
+async function distinctColors(png: Buffer): Promise<number> {
+  return page.evaluate(async (bytes) => {
+    const bitmap = await createImageBitmap(new Blob([new Uint8Array(bytes)], { type: "image/png" }));
+    const ctx = new OffscreenCanvas(bitmap.width, bitmap.height).getContext("2d")!;
+    ctx.drawImage(bitmap, 0, 0);
+    const data = ctx.getImageData(0, 0, bitmap.width, bitmap.height).data;
+    const seen = new Set<number>();
+    for (let i = 0; i < data.length; i += 4) seen.add((data[i] << 16) | (data[i + 1] << 8) | data[i + 2]);
+    return seen.size;
+  }, [...png]);
+}
 
 test("switches to the Scene tab and lists placed objects", async () => {
   await page.getByRole("tab", { name: /Scene/ }).click();
