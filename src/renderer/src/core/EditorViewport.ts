@@ -164,6 +164,11 @@ export class EditorViewport {
     this.redraw();
   }
 
+  /** Drop sprites that show loaded sheets; the next `setAssets` draws them again. */
+  releaseSheetTextures(): void {
+    this.renderer.releaseSheetTextures();
+  }
+
   /** Hide/show the editing surface (Play mode swaps in the game renderer). */
   setVisible(visible: boolean): void {
     this.canvas.style.display = visible ? "block" : "none";

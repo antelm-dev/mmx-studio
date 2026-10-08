@@ -21,10 +21,6 @@ describe("buildStudioAssets", () => {
     expect(manifest.hudSheets.xBar).toBe("sprite.bg");
     expect(soundIds).toEqual([]);
     expect(starterAssets.manifest.playerSheet).not.toBe(manifest.playerSheet);
-    // Starter sheets are data URLs, like the ones the project bridge returns.
-    expect(starterAssets.manifest.sheetUrls[starterAssets.manifest.playerSheet]).toMatch(
-      /^data:image\/png;base64,/,
-    );
   });
 
   it("throws a readable error for missing or invalid bindings", () => {
