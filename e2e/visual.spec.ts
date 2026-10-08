@@ -20,7 +20,8 @@ test.beforeAll(async () => {
   delete env.ELECTRON_RUN_AS_NODE;
   app = await electron.launch({
     executablePath: electronPath as unknown as string,
-    args: [resolve(appRoot, "out/main/index.js")],
+    // Baselines are 1280×800 CSS px at scale 1; a 125 %/150 % display would otherwise change the PNG size.
+    args: [resolve(appRoot, "out/main/index.js"), "--force-device-scale-factor=1"],
     cwd: appRoot,
     env,
   });
