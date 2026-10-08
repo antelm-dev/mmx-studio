@@ -1,4 +1,5 @@
-import { resolve } from "node:path";
+import { readdirSync, readFileSync } from "node:fs";
+import { join, resolve } from "node:path";
 import {
   _electron as electron,
   expect,
@@ -278,4 +279,85 @@ test("title bar menus work by pointer and keyboard and return focus", async () =
 
   expect(pageErrors, `page errors: ${pageErrors.join("\n")}`).toEqual([]);
   expect(consoleErrors, `console errors: ${consoleErrors.join("\n")}`).toEqual([]);
+});
+
+test("production renderer bundle ships no Tailwind or Radix", () => {
+  const assets = resolve(appRoot, "out/renderer/assets");
+  const read = (ext: string) =>
+    readdirSync(assets)
+      .filter((f) => f.endsWith(ext))
+      .map((f) => readFileSync(join(assets, f), "utf8"));
+  const css = read(".css");
+  expect(css.length).toBeGreaterThan(0);
+  for (const sheet of css) {
+    expect(sheet).not.toContain("--tw-");
+    expect(sheet).not.toContain("tailwindcss");
+  }
+  for (const chunk of read(".js")) {
+    expect(chunk).not.toContain("@radix-ui");
+    expect(chunk).not.toContain("data-radix-");
+  }
+});
+
+// Last in the file: it reloads the window.
+test("theme toggle restyles Chakra, Dockview and Monaco and survives reload", async () => {
+  pageErrors.length = 0;
+  const theme = () => page.evaluate(() => document.documentElement.dataset.theme);
+  const background = (selector: string) =>
+    page.locator(selector).first().evaluate((el) => getComputedStyle(el).backgroundColor);
+  const surface = () =>
+    page.evaluate(() => {
+      const probe = document.createElement("div");
+      probe.style.backgroundColor = "var(--studio-surface)";
+      document.body.append(probe);
+      const color = getComputedStyle(probe).backgroundColor;
+      probe.remove();
+      return color;
+    });
+  const showPanels = async () => {
+    await page.getByRole("tab", { name: "Object Palette" }).click();
+    await page.getByRole("tab", { name: "Document JSON" }).click();
+    await expect(page.locator(".monaco-editor").first()).toBeVisible();
+  };
+  // Palette panel (Chakra `Panel`), its active Dockview tab, and the Monaco JSON editor.
+  const colors = async () => ({
+    panel: await page
+      .getByRole("textbox", { name: "Search objects" })
+      .locator("xpath=../..")
+      .evaluate((el) => getComputedStyle(el).backgroundColor),
+    tab: await background(".dv-tab.dv-active-tab"),
+    monaco: await background(".monaco-editor"),
+  });
+  const toggleDarkTheme = async () => {
+    await page.getByRole("button", { name: "View menu" }).click();
+    await page.getByRole("menuitemcheckbox", { name: /Dark theme/ }).click();
+    await page.keyboard.press("Escape");
+  };
+
+  await showPanels();
+  const initialTheme = await theme();
+  const before = await colors();
+  expect(before.panel).toBe(await surface());
+
+  await toggleDarkTheme();
+  const toggledTheme = initialTheme === "dark" ? "light" : "dark";
+  await expect.poll(theme).toBe(toggledTheme);
+  await expect.poll(colors).not.toEqual(before);
+  const after = await colors();
+  expect(after.panel).not.toBe(before.panel);
+  expect(after.tab).not.toBe(before.tab);
+  expect(after.monaco).not.toBe(before.monaco);
+  expect(after.panel).toBe(await surface());
+
+  await page.reload();
+  await expect(page.locator("#viewport-canvas")).toBeVisible({ timeout: 30_000 });
+  expect(await theme()).toBe(toggledTheme);
+  await showPanels();
+  await expect.poll(colors).toEqual(after);
+
+  // Restore the persisted theme for later specs.
+  await toggleDarkTheme();
+  await expect.poll(theme).toBe(initialTheme);
+  await expect.poll(colors).toEqual(before);
+  expect(pageErrors, `page errors: ${pageErrors.join("\n")}`).toEqual([]);
 });

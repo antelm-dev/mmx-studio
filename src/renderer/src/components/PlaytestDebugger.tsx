@@ -1,4 +1,5 @@
 import { type ReactElement, type ReactNode } from "react";
+import { chakra } from "@chakra-ui/react";
 import {
   Bug,
   ClipboardCopy,
@@ -39,8 +40,19 @@ export function PlaytestDebugger(): ReactElement | null {
   const debug = snap.debug;
 
   return (
-    <div className="absolute z-[4] top-3 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 pointer-events-none">
-      <OverlayCard className="pointer-events-auto flex items-center gap-1 h-9 px-1.5">
+    <chakra.div
+      position="absolute"
+      zIndex="4"
+      top="3"
+      left="50%"
+      transform="translateX(-50%)"
+      display="flex"
+      flexDirection="column"
+      alignItems="center"
+      gap="2"
+      pointerEvents="none"
+    >
+      <OverlayCard pointerEvents="auto" display="flex" alignItems="center" gap="1" h="9" px="1.5">
         <IconButton
           label={paused ? "Resume (F8)" : "Pause (F8)"}
           onClick={() => editor.playtestTogglePause()}
@@ -124,7 +136,9 @@ export function PlaytestDebugger(): ReactElement | null {
 
       {debug.notice && (
         <OverlayCard
-          className="pointer-events-none px-2.5 py-1"
+          pointerEvents="none"
+          px="2.5"
+          py="1"
           rounded="lg"
           boxShadow="none"
           backdropFilter="none"
@@ -138,7 +152,7 @@ export function PlaytestDebugger(): ReactElement | null {
       {inspectorVisible && runtime && (
         <RuntimeInspector runtime={runtime} selectedRuntimeId={snap.selectedRuntimeId} />
       )}
-    </div>
+    </chakra.div>
   );
 }
 
@@ -155,18 +169,31 @@ function TimelineStrip({
 }): ReactElement {
   const max = Math.max(recordedLength, frame, 1);
   return (
-    <OverlayCard className="pointer-events-auto flex items-center gap-2 max-w-[520px] w-[min(520px,92vw)] px-2.5 py-1.5">
+    <OverlayCard
+      pointerEvents="auto"
+      display="flex"
+      alignItems="center"
+      gap="2"
+      maxW="520px"
+      w="min(520px,92vw)"
+      px="2.5"
+      py="1.5"
+    >
       <OverlayLabel display="inline-flex" flex="none">
         <Gauge size={12} />
       </OverlayLabel>
-      <input
+      <chakra.input
         type="range"
         min={0}
         max={max}
         value={frame}
         disabled={!paused && recordedLength === 0}
         onChange={(e) => editor.playtestSeek(Number(e.target.value))}
-        className="flex-1 h-1.5 cursor-pointer disabled:opacity-40"
+        flex="1"
+        h="1.5"
+        bg="transparent"
+        cursor="pointer"
+        _disabled={{ opacity: 0.4 }}
         style={{ accentColor: "#4b8eff" }}
         aria-label="Seek timeline"
         title={`Seek to frame (ckpt ${checkpointFrame})`}
@@ -187,11 +214,25 @@ function PerformanceReadout({
 }): ReactElement {
   return (
     <OverlayCard
-      className="pointer-events-none flex flex-col items-stretch gap-1 max-w-[520px] px-2.5 py-1.5"
+      pointerEvents="none"
+      display="flex"
+      flexDirection="column"
+      alignItems="stretch"
+      gap="1"
+      maxW="520px"
+      px="2.5"
+      py="1.5"
       fontSize="10.5px"
       color="#b4c1d4"
     >
-      <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
+      <chakra.div
+        display="flex"
+        flexWrap="wrap"
+        alignItems="center"
+        justifyContent="center"
+        columnGap="3"
+        rowGap="1"
+      >
         <Readout label="fps" value={stats.fps.toFixed(1)} />
         <TimingReadout label="sim" summary={stats.simulation} />
         <TimingReadout label="ren" summary={stats.rendering} />
@@ -199,7 +240,7 @@ function PerformanceReadout({
         <Readout label="discarded" value={`${fmtMs(stats.discardedSimulationTime)} ms`} />
         <Readout label="rec" value={String(debug.recordedLength)} />
         {debug.tainted && <Readout label="replay" value="tainted" />}
-      </div>
+      </chakra.div>
       <OverlayLabel
         display="block"
         textAlign="center"
@@ -221,12 +262,12 @@ function TimingReadout({
   summary: FrameStatsSnapshot["simulation"];
 }): ReactElement {
   return (
-    <div className="flex items-center gap-1.5 px-0.5" title="median / p95 / worst (ms)">
+    <chakra.div display="flex" alignItems="center" gap="1.5" px="0.5" title="median / p95 / worst (ms)">
       <OverlayLabel>{label}</OverlayLabel>
       <OverlayValue>
         {fmtMs(summary.median)} / {fmtMs(summary.p95)} / {fmtMs(summary.worst)}
       </OverlayValue>
-    </div>
+    </chakra.div>
   );
 }
 
@@ -247,9 +288,9 @@ function RuntimeInspector({
   const selected = actors.find((a) => a.runtimeId === selectedRuntimeId) ?? runtime.player;
 
   return (
-    <OverlayCard className="pointer-events-auto w-[236px] p-2.5" fontSize="11px" color="#b4c1d4">
+    <OverlayCard pointerEvents="auto" w="236px" p="2.5" fontSize="11px" color="#b4c1d4">
       {actors.length > 1 && (
-        <div className="flex flex-wrap gap-1 mb-2">
+        <chakra.div display="flex" flexWrap="wrap" gap="1" mb="2">
           {actors.map((a) => (
             <OverlayButton
               key={a.runtimeId}
@@ -266,7 +307,7 @@ function RuntimeInspector({
               {a.kind}
             </OverlayButton>
           ))}
-        </div>
+        </chakra.div>
       )}
 
       <Field label="kind" value={selected.kind} />
@@ -321,15 +362,15 @@ function IconButton({
 }
 
 function Divider(): ReactElement {
-  return <span className="w-px h-4 mx-0.5 bg-[#3a4960]" />;
+  return <chakra.span w="1px" h="4" mx="0.5" bg="#3a4960" />;
 }
 
 function Readout({ label, value }: { label: string; value: string }): ReactElement {
   return (
-    <div className="flex items-center gap-1.5 px-1.5">
+    <chakra.div display="flex" alignItems="center" gap="1.5" px="1.5">
       <OverlayLabel>{label}</OverlayLabel>
       <OverlayValue>{value}</OverlayValue>
-    </div>
+    </chakra.div>
   );
 }
 
@@ -343,16 +384,17 @@ function Field({
   mono?: boolean;
 }): ReactElement {
   return (
-    <div className="flex items-baseline justify-between gap-2 py-[1.5px]">
+    <chakra.div display="flex" alignItems="baseline" justifyContent="space-between" gap="2" py="1.5px">
       <OverlayLabel fontSize="10px" letterSpacing="0.4px" flex="none">
         {label}
       </OverlayLabel>
       <OverlayValue
-        className="text-right truncate"
+        textAlign="right"
+        truncate
         {...(mono ? { fontSize: "10.5px" } : { fontFamily: "inherit", fontSize: "inherit" })}
       >
         {value}
       </OverlayValue>
-    </div>
+    </chakra.div>
   );
 }

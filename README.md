@@ -41,7 +41,7 @@ the local package snapshot used by Studio.
 | Packaging                                               | **electron-builder** (`pack:dir` / `dist`)                                                                             |
 | UI                                                      | **React 19 + TypeScript + Vite**                                                                                       |
 | Docking / tabs / floating panels                        | **Dockview** (`dockview-react`)                                                                                        |
-| Menus, tooltips, selects, checkboxes                    | **Radix UI** primitives + custom CSS variables                                                                         |
+| Menus, tooltips, selects, checkboxes, panels            | **Chakra UI v3** (`src/renderer/src/ui/` wrappers) over `--studio-*` CSS variables                                      |
 | Ephemeral UI state (tabs, search, toasts, context menu) | **Zustand**                                                                                                            |
 | Editing viewport & Play mode                            | **Pixi.js** via `@mmx/renderer-pixi` + playtest via `@mmx/editor-runtime` → `@mmx/runtime/tooling`                     |
 | Document JSON editing                                   | **Monaco Editor** (self-hosted, no CDN)                                                                                |

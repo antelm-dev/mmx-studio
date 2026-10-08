@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { chakra } from "@chakra-ui/react";
 import Editor from "@monaco-editor/react";
 import { editor, useEditorSnapshot } from "../app/useEditor.js";
 import { parseDocument, serializeDocument } from "../core/persistence.js";
@@ -47,7 +48,7 @@ export function JsonPanel() {
           Revert
         </ActionButton>
       </PanelActions>
-      <div className="flex-1 min-h-0 bg-surface">
+      <chakra.div flex="1" minH="0" bg="studio.surface">
         <Editor
           height="100%"
           language="json"
@@ -62,7 +63,7 @@ export function JsonPanel() {
             automaticLayout: true,
           }}
         />
-      </div>
+      </chakra.div>
     </Panel>
   );
 }

@@ -1,3 +1,4 @@
+import { Box, chakra } from "@chakra-ui/react";
 import {
   Blocks,
   ChevronDown,
@@ -15,13 +16,13 @@ import {
   ZoomOut,
 } from "lucide-react";
 import { editor, useEditorSnapshot } from "../app/useEditor.js";
-import { cx } from "../ui.js";
+
 import { ToolbarButton } from "../ui/editor/toolbar-button.js";
 import { MenuContent, MenuItem, MenuRoot, MenuTrigger } from "../ui/primitives/menu.js";
 import { Tooltip } from "./Tooltip.js";
 
-const divider = "w-px h-4 mx-0.5 bg-border";
-const group = "flex items-center gap-0.5";
+const Divider = chakra("div", { base: { w: "1px", h: "4", mx: "0.5", bg: "studio.border" } });
+const Group = chakra("div", { base: { display: "flex", alignItems: "center", gap: "0.5" } });
 
 /** Fixed command bar above the Dockview workspace. */
 export function Toolbar() {
@@ -31,9 +32,21 @@ export function Toolbar() {
   const zoomPercent = Math.round(snap.state.zoom * 100);
 
   return (
-    <div className="relative z-[5] h-9 px-2.5 flex items-center gap-1.5 bg-gradient-to-b from-chrome-2 to-surface border-b border-border shadow-[0_2px_10px_rgba(0,0,0,0.1)]">
-      <div className="flex items-center gap-2 flex-1 min-w-0">
-        <div className={group}>
+    <chakra.div
+      position="relative"
+      zIndex="5"
+      h="9"
+      px="2.5"
+      display="flex"
+      alignItems="center"
+      gap="1.5"
+      bgImage="linear-gradient(to bottom in oklab, {colors.studio.chromeSecondary}, {colors.studio.surface})"
+      borderBottom="1px solid"
+      borderColor="studio.border"
+      boxShadow="0 2px 10px rgba(0,0,0,0.1)"
+    >
+      <chakra.div display="flex" alignItems="center" gap="2" flex="1" minW="0">
+        <Group>
           <Tooltip label="Undo (Ctrl+Z)">
             <ToolbarButton
               icon
@@ -54,11 +67,11 @@ export function Toolbar() {
               <Redo2 size={14} />
             </ToolbarButton>
           </Tooltip>
-        </div>
+        </Group>
 
-        <div className={divider} />
+        <Divider />
 
-        <div className={group}>
+        <Group>
           <Tooltip label="Select / move — click, drag region, or Shift to add (V)">
             <ToolbarButton
               active={tool === "select"}
@@ -81,11 +94,11 @@ export function Toolbar() {
               <Blocks size={14} />
             </ToolbarButton>
           </Tooltip>
-        </div>
+        </Group>
 
-        <div className={divider} />
+        <Divider />
 
-        <div className={group}>
+        <Group>
           <Tooltip label="Toggle grid (G)">
             <ToolbarButton
               active={snap.state.gridVisible}
@@ -102,11 +115,11 @@ export function Toolbar() {
               <Magnet size={13} /> Snap
             </ToolbarButton>
           </Tooltip>
-        </div>
+        </Group>
 
-        <div className={divider} />
+        <Divider />
 
-        <div className={cx(group, "max-[1500px]:hidden")}>
+        <Group css={{ "@media (width < 1500px)": { display: "none" } }}>
           <Tooltip label="Zoom out (Ctrl+-)">
             <ToolbarButton
               icon
@@ -116,9 +129,15 @@ export function Toolbar() {
               <ZoomOut size={14} />
             </ToolbarButton>
           </Tooltip>
-          <span className="min-w-[38px] text-fg-2 font-mono text-[10.5px] text-center">
+          <chakra.span
+            minW="38px"
+            color="studio.fgSecondary"
+            fontFamily="mono"
+            fontSize="10.5px"
+            textAlign="center"
+          >
             {zoomPercent}%
-          </span>
+          </chakra.span>
           <Tooltip label="Zoom in (Ctrl+=)">
             <ToolbarButton
               icon
@@ -133,10 +152,20 @@ export function Toolbar() {
               <Maximize size={13} /> Fit
             </ToolbarButton>
           </Tooltip>
-        </div>
-      </div>
+        </Group>
+      </chakra.div>
 
-      <div className="absolute left-1/2 -translate-x-1/2 z-[1] px-0.5 border border-border-strong/70 rounded-lg bg-bg">
+      <chakra.div
+        position="absolute"
+        left="50%"
+        transform="translateX(-50%)"
+        zIndex="1"
+        px="0.5"
+        border="1px solid"
+        borderColor="studio.borderStrong/70"
+        rounded="lg"
+        bg="studio.bg"
+      >
         <MenuRoot positioning={{ placement: "bottom", gutter: 6 }}>
           <MenuTrigger asChild>
             <ToolbarButton
@@ -146,9 +175,18 @@ export function Toolbar() {
               fontWeight="650"
               aria-label="Level menu"
             >
-              <span className="text-accent text-[8px] font-extrabold tracking-[0.8px]">LEVEL</span>
+              <chakra.span
+                color="studio.accent"
+                fontSize="8px"
+                fontWeight="extrabold"
+                letterSpacing="0.8px"
+              >
+                LEVEL
+              </chakra.span>
               <span>{snap.levelTitle}</span>
-              <ChevronDown className="text-fg-3" size={12} />
+              <Box asChild color="studio.fgTertiary">
+                <ChevronDown size={12} />
+              </Box>
             </ToolbarButton>
           </MenuTrigger>
           <MenuContent>
@@ -160,16 +198,16 @@ export function Toolbar() {
             </MenuItem>
           </MenuContent>
         </MenuRoot>
-      </div>
+      </chakra.div>
 
-      <div className="flex items-center flex-none ml-auto">
+      <chakra.div display="flex" alignItems="center" flex="none" ml="auto">
         <Tooltip label="Play / Stop (Ctrl+Enter)">
           <ToolbarButton tone={playing ? "danger" : "primary"} onClick={() => editor.togglePlay()}>
             {playing ? <Square size={11} /> : <Play size={11} />}
             {playing ? "Stop" : "Play"}
           </ToolbarButton>
         </Tooltip>
-      </div>
-    </div>
+      </chakra.div>
+    </chakra.div>
   );
 }

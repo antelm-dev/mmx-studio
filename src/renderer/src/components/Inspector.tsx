@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { chakra } from "@chakra-ui/react";
 import { Grid3x3, ListTree, MousePointer2, Sparkles } from "lucide-react";
 import {
   DECORATION_LAYERS,
@@ -20,7 +21,6 @@ import { getDecorationAsset } from "@mmx/renderer-pixi";
 import { LOADOUT_IDS } from "@mmx/project-io";
 import { editor, projectSession, useEditorSnapshot, useProjectSession } from "../app/useEditor.js";
 import { selectedDecorationIds, selectedObjectIds } from "../core/EditorStore.js";
-import { cx } from "../ui.js";
 import { ActionButton } from "../ui/editor/action-button.js";
 import { Checkbox } from "../ui/editor/checkbox.js";
 import { Field, FieldInput } from "../ui/editor/field.js";
@@ -30,13 +30,77 @@ import { Select } from "../ui/editor/select.js";
 import { SpritePreview } from "./SpritePreview.js";
 import { focusPanel } from "../app/dock.js";
 
-const errText = "text-danger-fg text-[10.5px] mt-[3px] mb-1";
-const emptyTitle = "mb-1.5 text-fg font-[650]";
-const emptyCopy = "max-w-[220px] text-fg-3 text-[11.5px] leading-[1.55]";
-const emptyIcon =
-  "grid place-items-center w-12 h-12 mb-4 border border-accent/35 rounded-[14px] " +
-  "text-[#7aaaff] bg-[linear-gradient(145deg,rgba(59,130,246,0.18),rgba(59,130,246,0.04))] shadow-[0_8px_24px_rgba(0,0,0,0.2)]";
-const emptyState = "flex flex-col items-center pt-16 px-7 pb-6 text-center";
+const ErrorText = chakra("div", {
+  base: { color: "studio.dangerFg", fontSize: "10.5px", mt: "3px", mb: "1" },
+});
+const EmptyState = chakra("div", {
+  base: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    pt: "16",
+    px: "7",
+    pb: "6",
+    textAlign: "center",
+  },
+});
+const EmptyTitle = chakra("div", { base: { mb: "1.5", color: "studio.fg", fontWeight: "650" } });
+const EmptyCopy = chakra("div", {
+  base: { maxW: "220px", color: "studio.fgTertiary", fontSize: "11.5px", lineHeight: "1.55" },
+});
+const EmptyIcon = chakra("div", {
+  base: {
+    display: "grid",
+    placeItems: "center",
+    w: "12",
+    h: "12",
+    mb: "4",
+    border: "1px solid",
+    borderColor: "studio.accent/35",
+    rounded: "14px",
+    color: "#7aaaff",
+    bgImage: "linear-gradient(145deg,rgba(59,130,246,0.18),rgba(59,130,246,0.04))",
+    boxShadow: "0 8px 24px rgba(0,0,0,0.2)",
+  },
+});
+/** Preview + name/id block at the top of a single selection. */
+const Header = chakra("div", {
+  base: {
+    display: "flex",
+    alignItems: "center",
+    gap: "3",
+    pt: "4",
+    px: "3.5",
+    pb: "3",
+    fontWeight: "semibold",
+  },
+});
+const HeaderText = chakra("div", {
+  base: { display: "flex", flexDirection: "column", gap: "3px", minW: "0" },
+});
+const HeaderId = chakra("span", {
+  base: { fontFamily: "mono", fontSize: "10px", fontWeight: "medium", color: "studio.fgTertiary" },
+});
+const Row = chakra("div", { base: { py: "3px", px: "3.5" } });
+const RowGrid = chakra("div", {
+  base: {
+    display: "grid",
+    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+    gap: "2",
+    py: "3px",
+    px: "3.5",
+  },
+});
+const KeyValue = chakra("div", {
+  base: {
+    py: "1",
+    px: "3.5",
+    textStyle: "xs",
+    display: "flex",
+    justifyContent: "space-between",
+    gap: "2.5",
+  },
+});
 
 interface Single {
   inst: LevelObjectInstance;
@@ -139,31 +203,29 @@ export function Inspector() {
       <PanelScroll>
         {single ? (
           <>
-            <div className="flex items-center gap-3 pt-4 px-3.5 pb-3 font-semibold">
+            <Header>
               <SpritePreview
                 definitionId={single.def.id}
                 size={56}
                 flip={previewFlip(single)}
                 fallbackColor={single.def.editor.color}
               />
-              <div className="flex flex-col gap-[3px] min-w-0">
-                <span className="leading-[1.2]">
+              <HeaderText>
+                <chakra.span lineHeight="1.2">
                   {single.def.icon} {single.def.name}
-                </span>
-                <span className="font-mono text-[10px] font-medium text-fg-3 break-all">
-                  {single.inst.id}
-                </span>
-              </div>
-            </div>
+                </chakra.span>
+                <HeaderId wordBreak="break-all">{single.inst.id}</HeaderId>
+              </HeaderText>
+            </Header>
 
             {objectIssues.map((issue) => (
-              <div key={issue.code} className={cx(errText, "px-3 py-1")}>
+              <ErrorText key={issue.code} px="3" py="1">
                 {issue.message}
-              </div>
+              </ErrorText>
             ))}
 
             <SectionTitle divider>Transform</SectionTitle>
-            <div className="grid grid-cols-2 gap-2 py-[3px] px-3.5">
+            <RowGrid>
               <Field label="X">
                 <FieldInput
                   type="number"
@@ -180,9 +242,9 @@ export function Inspector() {
                   onBlur={(e) => onTransform(single, "y", e.target.value)}
                 />
               </Field>
-            </div>
+            </RowGrid>
             {single.def.editor.resizable && (
-              <div className="grid grid-cols-2 gap-2 py-[3px] px-3.5">
+              <RowGrid>
                 <Field label="Width" invalid={hasIssue("width")}>
                   <FieldInput
                     type="number"
@@ -199,14 +261,14 @@ export function Inspector() {
                     onBlur={(e) => onTransform(single, "height", e.target.value)}
                   />
                 </Field>
-              </div>
+              </RowGrid>
             )}
 
             {single.def.properties.length > 0 && (
               <>
                 <SectionTitle divider>Properties</SectionTitle>
                 {single.def.properties.map((prop) => (
-                  <div className="py-[3px] px-3.5" key={prop.key}>
+                  <Row key={prop.key}>
                     {prop.type === "boolean" ? (
                       <Checkbox
                         label={prop.label}
@@ -232,11 +294,13 @@ export function Inspector() {
                       </Field>
                     )}
                     {issueFor(prop.key) ? (
-                      <div className={errText}>{issueFor(prop.key)!.message}</div>
+                      <ErrorText>{issueFor(prop.key)!.message}</ErrorText>
                     ) : prop.help ? (
-                      <div className="text-muted text-[10px] mt-[3px] mb-1">{prop.help}</div>
+                      <chakra.div color="studio.muted" fontSize="10px" mt="3px" mb="1">
+                        {prop.help}
+                      </chakra.div>
                     ) : null}
-                  </div>
+                  </Row>
                 ))}
               </>
             )}
@@ -252,13 +316,13 @@ export function Inspector() {
           </>
         ) : objectIds.length > 1 ? (
           <>
-            <div className={emptyState}>
-              <div className={emptyIcon}>
+            <EmptyState>
+              <EmptyIcon>
                 <MousePointer2 size={20} />
-              </div>
-              <div className={emptyTitle}>{objectIds.length} objects selected</div>
-              <div className={emptyCopy}>Duplicate or delete the current selection.</div>
-            </div>
+              </EmptyIcon>
+              <EmptyTitle>{objectIds.length} objects selected</EmptyTitle>
+              <EmptyCopy>Duplicate or delete the current selection.</EmptyCopy>
+            </EmptyState>
             <PanelActions>
               <ActionButton onClick={() => editor.duplicateSelection()}>
                 Duplicate
@@ -272,13 +336,13 @@ export function Inspector() {
           <DecorationInspector inst={singleDecoration} />
         ) : decorationIds.length > 1 ? (
           <>
-            <div className={emptyState}>
-              <div className={emptyIcon}>
+            <EmptyState>
+              <EmptyIcon>
                 <Sparkles size={20} />
-              </div>
-              <div className={emptyTitle}>{decorationIds.length} decorations selected</div>
-              <div className={emptyCopy}>Duplicate or delete the current selection.</div>
-            </div>
+              </EmptyIcon>
+              <EmptyTitle>{decorationIds.length} decorations selected</EmptyTitle>
+              <EmptyCopy>Duplicate or delete the current selection.</EmptyCopy>
+            </EmptyState>
             <PanelActions>
               <ActionButton onClick={() => editor.duplicateSelection()}>
                 Duplicate
@@ -290,26 +354,30 @@ export function Inspector() {
           </>
         ) : singleTile ? (
           <>
-            <div className="flex items-center gap-3 pt-4 px-3.5 pb-3 font-semibold">
-              <div className={cx(emptyIcon, "mb-0 w-14 h-14")}>
+            <Header>
+              <EmptyIcon w="14" h="14">
                 <Grid3x3 size={20} />
-              </div>
-              <div className="flex flex-col gap-[3px] min-w-0">
-                <span className="leading-[1.2]">{tileKindLabel(singleTile.value)} tile</span>
-                <span className="font-mono text-[10px] font-medium text-fg-3">
+              </EmptyIcon>
+              <HeaderText>
+                <chakra.span lineHeight="1.2">{tileKindLabel(singleTile.value)} tile</chakra.span>
+                <HeaderId>
                   Cell {singleTile.col}, {singleTile.row}
-                </span>
-              </div>
-            </div>
+                </HeaderId>
+              </HeaderText>
+            </Header>
             <SectionTitle divider>Terrain</SectionTitle>
-            <div className="py-1 px-3.5 text-xs flex justify-between gap-2.5">
-              <span className="text-muted">Index</span>
-              <span className="font-mono text-[#e6ebf5]">{singleTile.index}</span>
-            </div>
-            <div className="py-1 px-3.5 text-xs flex justify-between gap-2.5">
-              <span className="text-muted">Kind</span>
-              <span className="font-mono text-[#e6ebf5]">{tileKindLabel(singleTile.value)}</span>
-            </div>
+            <KeyValue>
+              <chakra.span color="studio.muted">Index</chakra.span>
+              <chakra.span fontFamily="mono" color="#e6ebf5">
+                {singleTile.index}
+              </chakra.span>
+            </KeyValue>
+            <KeyValue>
+              <chakra.span color="studio.muted">Kind</chakra.span>
+              <chakra.span fontFamily="mono" color="#e6ebf5">
+                {tileKindLabel(singleTile.value)}
+              </chakra.span>
+            </KeyValue>
             <PanelActions>
               <ActionButton danger onClick={() => editor.deleteSelection()}>
                 Erase tile
@@ -318,13 +386,13 @@ export function Inspector() {
           </>
         ) : tileSelection.length > 1 ? (
           <>
-            <div className={emptyState}>
-              <div className={emptyIcon}>
+            <EmptyState>
+              <EmptyIcon>
                 <Grid3x3 size={20} />
-              </div>
-              <div className={emptyTitle}>{tileSelection.length} tiles selected</div>
-              <div className={emptyCopy}>Erase the selected terrain cells with Delete.</div>
-            </div>
+              </EmptyIcon>
+              <EmptyTitle>{tileSelection.length} tiles selected</EmptyTitle>
+              <EmptyCopy>Erase the selected terrain cells with Delete.</EmptyCopy>
+            </EmptyState>
             <PanelActions>
               <ActionButton danger onClick={() => editor.deleteSelection()}>
                 Erase tiles
@@ -334,21 +402,34 @@ export function Inspector() {
         ) : (
           <>
           <ProjectSettings />
-          <div className={emptyState}>
-            <div className={emptyIcon}>
+          <EmptyState>
+            <EmptyIcon>
               <MousePointer2 size={20} />
-            </div>
-            <div className={emptyTitle}>Nothing selected</div>
-            <div className={emptyCopy}>
+            </EmptyIcon>
+            <EmptyTitle>Nothing selected</EmptyTitle>
+            <EmptyCopy>
               Choose an object or solid tile on the canvas, or browse the Scene tab.
-            </div>
-            <button
-              className="inline-flex items-center gap-2 h-8 mt-4 px-3 rounded-lg border border-border-strong bg-raised text-[11.5px] font-semibold text-fg-2 hover:bg-hover hover:text-fg"
+            </EmptyCopy>
+            <chakra.button
+              display="inline-flex"
+              alignItems="center"
+              gap="2"
+              h="8"
+              mt="4"
+              px="3"
+              rounded="lg"
+              border="1px solid"
+              borderColor="studio.borderStrong"
+              bg="studio.raised"
+              fontSize="11.5px"
+              fontWeight="semibold"
+              color="studio.fgSecondary"
+              _hover={{ bg: "studio.hover", color: "studio.fg" }}
               onClick={() => focusPanel("scene")}
             >
               <ListTree size={14} /> Browse scene objects
-            </button>
-          </div>
+            </chakra.button>
+          </EmptyState>
           </>
         )}
       </PanelScroll>
@@ -370,14 +451,14 @@ function ProjectSettings() {
   return (
     <>
       <SectionTitle divider>Project</SectionTitle>
-      <div className="flex flex-col py-[3px] px-3.5">
+      <Row display="flex" flexDirection="column">
         <Select
           label="Player loadout"
           options={LOADOUT_IDS.map((id) => ({ label: loadoutLabel(id), value: id }))}
           value={loadout}
           onValueChange={(id) => projectSession.setPlayerLoadout(id)}
         />
-      </div>
+      </Row>
     </>
   );
 }
@@ -422,26 +503,26 @@ function DecorationInspector({ inst }: { inst: DecorationInstance }) {
 
   return (
     <>
-      <div className="flex items-center gap-3 pt-4 px-3.5 pb-3 font-semibold">
+      <Header>
         <SpritePreview assetId={inst.assetId} size={56} />
-        <div className="flex flex-col gap-[3px] min-w-0">
-          <span className="leading-[1.2]">{name}</span>
-          <span className="font-mono text-[10px] font-medium text-fg-3 break-all">{inst.id}</span>
-        </div>
-      </div>
+        <HeaderText>
+          <chakra.span lineHeight="1.2">{name}</chakra.span>
+          <HeaderId wordBreak="break-all">{inst.id}</HeaderId>
+        </HeaderText>
+      </Header>
 
       <SectionTitle divider>Layer</SectionTitle>
-      <div className="py-[3px] px-3.5">
+      <Row>
         <Select
           aria-label="Layer"
           options={DECORATION_LAYERS.map((l) => ({ label: l, value: l }))}
           value={inst.layer}
           onValueChange={onLayer}
         />
-      </div>
+      </Row>
 
       <SectionTitle divider>Properties</SectionTitle>
-      <div className="py-[3px] px-3.5">
+      <Row>
         <Checkbox
           label="Flip X"
           mb="2"
@@ -454,8 +535,8 @@ function DecorationInspector({ inst }: { inst: DecorationInstance }) {
           checked={inst.flipY === true}
           onCheckedChange={(c) => onFlip("flipY", c)}
         />
-      </div>
-      <div className="grid grid-cols-2 gap-2 py-[3px] px-3.5">
+      </Row>
+      <RowGrid>
         <Field label="Rotation">
           <FieldInput
             type="number"
@@ -474,8 +555,8 @@ function DecorationInspector({ inst }: { inst: DecorationInstance }) {
             onBlur={(e) => onParallax(e.target.value)}
           />
         </Field>
-      </div>
-      <div className="py-[3px] px-3.5">
+      </RowGrid>
+      <Row>
         <Field label="Tint (hex)">
           <FieldInput
             type="text"
@@ -485,7 +566,7 @@ function DecorationInspector({ inst }: { inst: DecorationInstance }) {
             onBlur={(e) => onTint(e.target.value)}
           />
         </Field>
-      </div>
+      </Row>
 
       <PanelActions>
         <ActionButton onClick={() => editor.duplicateSelection()}>

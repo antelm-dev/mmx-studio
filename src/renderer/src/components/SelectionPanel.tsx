@@ -1,4 +1,5 @@
 import { useMemo, type ReactElement } from "react";
+import { chakra } from "@chakra-ui/react";
 import { instanceSize, requireDefinition, TerrainTile } from "@mmx/content-schema";
 import { useEditorSnapshot } from "../app/useEditor.js";
 import { selectedObjectIds, selectionSize } from "../core/EditorStore.js";
@@ -71,10 +72,20 @@ export function SelectionPanel(): ReactElement {
     <Panel>
       <PanelScroll>
         {selection.map((row) => (
-          <div className="py-1 px-3 text-xs flex justify-between gap-2.5" key={row.k}>
-            <span className="text-muted">{row.k}</span>
-            <span className="font-mono text-[#e6ebf5] text-right break-all">{row.v}</span>
-          </div>
+          <chakra.div
+            py="1"
+            px="3"
+            textStyle="xs"
+            display="flex"
+            justifyContent="space-between"
+            gap="2.5"
+            key={row.k}
+          >
+            <chakra.span color="studio.muted">{row.k}</chakra.span>
+            <chakra.span fontFamily="mono" color="#e6ebf5" textAlign="right" wordBreak="break-all">
+              {row.v}
+            </chakra.span>
+          </chakra.div>
         ))}
       </PanelScroll>
     </Panel>

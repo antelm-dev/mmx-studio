@@ -84,7 +84,7 @@ export function MenuGroup({ label, children }: Readonly<{ label: ReactNode; chil
   );
 }
 
-/** `border="0"`: with preflight off, the underlying `<hr>` would draw its default rule. */
+/** `border="0"`: the reset gives the underlying `<hr>` a 1px top rule; the background draws the line. */
 export function MenuSeparator(props: ComponentProps<typeof Menu.Separator>) {
   return <Menu.Separator h="1px" my="1.5" mx="2" border="0" bg="studio.popoverBorder" {...props} />;
 }

@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
+import { chakra } from "@chakra-ui/react";
 import {
   ClipboardCopy,
   Code2,
@@ -27,7 +28,7 @@ import {
 import { PANELS, resetLayout, togglePanel, useOpenPanelIds } from "../app/dock.js";
 import { editor, useEditorSnapshot, useProjectSession } from "../app/useEditor.js";
 import { useUiStore } from "../store/uiStore.js";
-import { cx } from "../ui.js";
+
 import {
   MenuCheckboxItem,
   MenuContent,
@@ -40,6 +41,9 @@ import {
 } from "../ui/primitives/menu.js";
 
 const controls = () => window.studio?.window;
+
+const dragRegion = { WebkitAppRegion: "drag" };
+const noDragRegion = { WebkitAppRegion: "no-drag" };
 
 const modLabel = /Mac|iPhone|iPad|iPod/i.test(navigator.platform) ? "⌘" : "Ctrl";
 
@@ -63,27 +67,48 @@ export function TitleBar() {
   }, []);
 
   return (
-    <div className="flex items-stretch h-8 pl-3 bg-chrome border-b border-border select-none [-webkit-app-region:drag]">
-      <div className="flex items-center gap-2 min-w-0 text-[11.5px] font-semibold tracking-[0.3px] text-fg-3">
-        <img
+    <chakra.div
+      display="flex"
+      alignItems="stretch"
+      h="8"
+      pl="3"
+      bg="studio.chrome"
+      borderBottom="1px solid"
+      borderColor="studio.border"
+      userSelect="none"
+      css={dragRegion}
+    >
+      <chakra.div
+        display="flex"
+        alignItems="center"
+        gap="2"
+        minW="0"
+        fontSize="11.5px"
+        fontWeight="semibold"
+        letterSpacing="0.3px"
+        color="studio.fgTertiary"
+      >
+        <chakra.img
           src={`${import.meta.env.BASE_URL}favicon.png`}
           alt=""
-          className="w-[15px] h-[15px] flex-none"
+          w="15px"
+          h="15px"
+          flex="none"
         />
         <span data-testid="app-brand">
-          MMX <span className="text-fg-2">Studio</span>
+          MMX <chakra.span color="studio.fgSecondary">Studio</chakra.span>
         </span>
-      </div>
+      </chakra.div>
 
-      <div className="flex items-stretch ml-2 [-webkit-app-region:no-drag]">
+      <chakra.div display="flex" alignItems="stretch" ml="2" css={noDragRegion}>
         <FileMenu />
         <ViewMenu />
         <HelpMenu />
-      </div>
+      </chakra.div>
 
-      <div className="flex-1" />
+      <chakra.div flex="1" />
 
-      <div className="flex items-stretch [-webkit-app-region:no-drag]">
+      <chakra.div display="flex" alignItems="stretch" css={noDragRegion}>
         <ControlButton
           label={colorTheme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
           onClick={toggleColorTheme}
@@ -105,8 +130,8 @@ export function TitleBar() {
         <ControlButton label="Close" danger onClick={() => void controls()?.close()}>
           <X size={16} />
         </ControlButton>
-      </div>
-    </div>
+      </chakra.div>
+    </chakra.div>
   );
 }
 
@@ -153,8 +178,12 @@ function FileMenu() {
       <MenuItem value="save" onSelect={() => editor.save()}>
         <Save size={13} /> Save
         {snap.dirty && (
-          <span
-            className="w-1.5 h-1.5 rounded-full bg-[#60a5fa] shadow-[0_0_8px_rgba(96,165,250,0.65)]"
+          <chakra.span
+            w="1.5"
+            h="1.5"
+            rounded="full"
+            bg="#60a5fa"
+            boxShadow="0 0 8px rgba(96,165,250,0.65)"
             aria-label="Unsaved changes"
           />
         )}
@@ -299,12 +328,22 @@ function TitleMenu({
   return (
     <MenuRoot positioning={{ placement: "bottom-start", gutter: 2 }}>
       <MenuTrigger asChild>
-        <button
-          className="inline-flex items-center h-full px-2.5 text-[11.5px] font-medium text-fg-3 hover:bg-hover hover:text-fg data-[state=open]:bg-hover data-[state=open]:text-fg transition-colors duration-100"
+        <chakra.button
+          display="inline-flex"
+          alignItems="center"
+          h="full"
+          px="2.5"
+          fontSize="11.5px"
+          fontWeight="medium"
+          color="studio.fgTertiary"
+          transition="colors"
+          transitionDuration="100ms"
+          _hover={{ bg: "studio.hover", color: "studio.fg" }}
+          _open={{ bg: "studio.hover", color: "studio.fg" }}
           aria-label={ariaLabel}
         >
           {label}
-        </button>
+        </chakra.button>
       </MenuTrigger>
       <MenuContent overflowY="auto">{children}</MenuContent>
     </MenuRoot>
@@ -323,16 +362,21 @@ function ControlButton({
   children: ReactNode;
 }>) {
   return (
-    <button
+    <chakra.button
       aria-label={label}
       title={label}
       onClick={onClick}
-      className={cx(
-        "inline-flex items-center justify-center w-[46px] h-full text-fg-3 transition-colors duration-100",
-        danger ? "hover:bg-danger hover:text-white" : "hover:bg-hover hover:text-fg",
-      )}
+      display="inline-flex"
+      alignItems="center"
+      justifyContent="center"
+      w="46px"
+      h="full"
+      color="studio.fgTertiary"
+      transition="colors"
+      transitionDuration="100ms"
+      _hover={danger ? { bg: "studio.danger", color: "white" } : { bg: "studio.hover", color: "studio.fg" }}
     >
       {children}
-    </button>
+    </chakra.button>
   );
 }

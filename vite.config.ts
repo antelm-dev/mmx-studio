@@ -1,7 +1,6 @@
 import { resolve } from "node:path";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
-import tailwindcss from "@tailwindcss/vite";
 
 /**
  * Renderer build for MMX Studio (the React + Vite app). The `main` and `preload`
@@ -31,7 +30,7 @@ export default defineConfig({
       "@mmx/starter-template": resolve(__dirname, "src/starter-template/index.ts"),
     },
   },
-  plugins: [react(), tailwindcss()],
+  plugins: [react()],
   build: {
     target: "es2022",
     outDir: resolve(__dirname, "out/renderer"),

@@ -1,4 +1,5 @@
 import { type ReactElement, useEffect, useMemo, useRef } from "react";
+import { chakra } from "@chakra-ui/react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { ChevronDown, ChevronRight, Copy, Crosshair, Trash2, X } from "lucide-react";
 import {
@@ -15,10 +16,9 @@ import type { DockviewPanelApi } from "dockview-react";
 import { editor, useEditorSnapshot } from "../app/useEditor.js";
 import { selectedDecorationIds, selectedObjectIds } from "../core/EditorStore.js";
 import { useUiStore } from "../store/uiStore.js";
-import { cx } from "../ui.js";
 import { ListRow } from "../ui/editor/list-row.js";
-import { Panel, PanelScroll } from "../ui/editor/panel.js";
-import { SectionTitle } from "../ui/editor/section-title.js";
+import { Panel, PanelNote, PanelScroll } from "../ui/editor/panel.js";
+import { CategoryHeader, SectionTitle } from "../ui/editor/section-title.js";
 import {
   MenuContent,
   MenuContextTrigger,
@@ -28,9 +28,24 @@ import {
 } from "../ui/primitives/menu.js";
 import { SpritePreview } from "./SpritePreview.js";
 
-const cat =
-  "flex items-end text-[9.5px] uppercase tracking-[0.7px] text-fg-2 pt-[14px] px-3.5 pb-[5px] font-extrabold";
-const emptyNote = "px-3 py-3.5 text-muted text-xs";
+/** Muted monospace count after a category / section label. */
+const Count = chakra("span", {
+  base: {
+    fontFamily: "mono",
+    fontSize: "9px",
+    fontWeight: "medium",
+    letterSpacing: "0em",
+    textTransform: "none",
+    color: "studio.muted",
+  },
+});
+const RowText = chakra("span", {
+  base: { display: "flex", flexDirection: "column", gap: "1px", minW: "0" },
+});
+const RowCoords = chakra("span", {
+  base: { fontFamily: "mono", fontSize: "10px", color: "studio.muted" },
+  variants: { active: { true: { color: "studio.accent" } } },
+});
 
 type SceneItem = { inst: LevelObjectInstance; def: GameObjectDefinition };
 type SceneRow =
@@ -176,25 +191,36 @@ function SceneList({
   if (items.length === 0) {
     return (
       <PanelScroll ref={scrollRef}>
-        <div className={emptyNote}>No objects in the scene. Place one from the Object Palette.</div>
+        <PanelNote>No objects in the scene. Place one from the Object Palette.</PanelNote>
       </PanelScroll>
     );
   }
 
   return (
     <>
-      <div className="flex items-center justify-end px-3 pt-2 pb-1 flex-none">
-        <button
-          className="inline-flex items-center gap-1.5 h-6 px-2 rounded-md text-[10px] font-bold uppercase tracking-[0.5px] text-fg-3 hover:text-fg-2 hover:bg-hover"
+      <chakra.div display="flex" alignItems="center" justifyContent="flex-end" px="3" pt="2" pb="1" flex="none">
+        <chakra.button
+          display="inline-flex"
+          alignItems="center"
+          gap="1.5"
+          h="6"
+          px="2"
+          rounded="md"
+          fontSize="10px"
+          fontWeight="bold"
+          textTransform="uppercase"
+          letterSpacing="0.5px"
+          color="studio.fgTertiary"
+          _hover={{ color: "studio.fgSecondary", bg: "studio.hover" }}
           aria-pressed={grouped}
           title={grouped ? "Show a flat list" : "Group objects by category"}
           onClick={() => setGrouped(!grouped)}
         >
           {grouped ? "Grouped" : "Flat"}
-        </button>
-      </div>
+        </chakra.button>
+      </chakra.div>
       <PanelScroll ref={scrollRef}>
-        <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
+        <chakra.div position="relative" w="full" style={{ height: virtualizer.getTotalSize() }}>
           {virtualizer.getVirtualItems().map((v) => {
             const row = rows[v.index];
             const style = {
@@ -208,19 +234,20 @@ function SceneList({
             if (row.kind === "header") {
               const isCollapsed = collapsed[row.category] === true;
               return (
-                <button
+                <CategoryHeader
+                  as="button"
                   key={v.key}
-                  className={cx(cat, "w-full gap-1.5 cursor-pointer hover:text-fg-2")}
+                  w="full"
+                  gap="1.5"
+                  cursor="pointer"
                   style={style}
                   aria-expanded={!isCollapsed}
                   onClick={() => toggleGroup(row.category)}
                 >
                   {isCollapsed ? <ChevronRight size={12} /> : <ChevronDown size={12} />}
                   {row.label}
-                  <span className="font-mono text-[9px] font-medium tracking-normal normal-case text-muted">
-                    {row.count}
-                  </span>
-                </button>
+                  <Count>{row.count}</Count>
+                </CategoryHeader>
               );
             }
             const { inst, def } = row.item;
@@ -243,25 +270,18 @@ function SceneList({
                       flip={sceneFlip(row.item)}
                       fallbackColor={def.editor.color}
                     />
-                    <span className="flex flex-col gap-px min-w-0">
-                      <span className="whitespace-nowrap overflow-hidden text-ellipsis">
-                        {def.name}
-                      </span>
-                      <span
-                        className={cx(
-                          "font-mono text-[10px]",
-                          active ? "text-accent" : "text-muted",
-                        )}
-                      >
+                    <RowText>
+                      <chakra.span truncate>{def.name}</chakra.span>
+                      <RowCoords active={active}>
                         {inst.x}, {inst.y}
-                      </span>
-                    </span>
+                      </RowCoords>
+                    </RowText>
                   </ListRow>
                 </SceneRowMenu>
               </div>
             );
           })}
-        </div>
+        </chakra.div>
       </PanelScroll>
     </>
   );
@@ -278,12 +298,10 @@ function DecorationSceneList({
   const selected = new Set(selectedIds);
 
   return (
-    <div className="flex-none border-t border-border">
+    <chakra.div flex="none" borderTop="1px solid" borderColor="studio.border">
       <SectionTitle pt="2" pb="1">
         Decorations
-        <span className="font-mono text-[9px] font-medium tracking-normal normal-case text-muted ml-1.5">
-          {decorations.length}
-        </span>
+        <Count ml="1.5">{decorations.length}</Count>
       </SectionTitle>
       {decorations.map((dec) => {
         const asset = getDecorationAsset(dec.assetId);
@@ -301,15 +319,15 @@ function DecorationSceneList({
             }
           >
             <SpritePreview assetId={dec.assetId} size={28} />
-            <span className="flex flex-col gap-px min-w-0">
-              <span className="whitespace-nowrap overflow-hidden text-ellipsis">{name}</span>
-              <span className={cx("font-mono text-[10px]", active ? "text-accent" : "text-muted")}>
+            <RowText>
+              <chakra.span truncate>{name}</chakra.span>
+              <RowCoords active={active}>
                 {dec.x}, {dec.y} · {dec.layer}
-              </span>
-            </span>
+              </RowCoords>
+            </RowText>
           </ListRow>
         );
       })}
-    </div>
+    </chakra.div>
   );
 }
