@@ -259,14 +259,22 @@ export class EditorViewportInteraction {
     else this.redraw();
   }
 
+  private readonly windowListeners = new AbortController();
+
   private bindPointer(): void {
     const c = this.canvas;
     c.addEventListener("pointerdown", (e) => this.onPointerDown(e));
     c.addEventListener("pointermove", (e) => this.onPointerMove(e));
-    window.addEventListener("pointerup", (e) => this.onPointerUp(e));
+    const { signal } = this.windowListeners;
+    window.addEventListener("pointerup", (e) => this.onPointerUp(e), { signal });
     c.addEventListener("wheel", (e) => this.onWheel(e), { passive: false });
-    window.addEventListener("keydown", (e) => { if (e.code === "Space") this.spaceDown = true; });
-    window.addEventListener("keyup", (e) => { if (e.code === "Space") this.spaceDown = false; });
+    window.addEventListener("keydown", (e) => { if (e.code === "Space") this.spaceDown = true; }, { signal });
+    window.addEventListener("keyup", (e) => { if (e.code === "Space") this.spaceDown = false; }, { signal });
+  }
+
+  /** Drop the window listeners; the canvas ones go with the canvas. */
+  destroy(): void {
+    this.windowListeners.abort();
   }
 
   private redraw(): void {
