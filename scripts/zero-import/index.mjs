@@ -1,4 +1,4 @@
-// Usage: node scripts/zero-import/index.mjs <cache-dir> <out-dir>
+// Usage: node --import tsx scripts/zero-import/index.mjs <cache-dir> <out-dir>
 // Turns the zero-x-mashup cache (game/cache) into a Studio project directory.
 // The output holds Capcom-derived assets: it gets its own catch-all .gitignore.
 import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -6,20 +6,20 @@ import { dirname, join, resolve } from "node:path";
 import { crc32, deflateSync, inflateSync } from "node:zlib";
 
 import {
-  arcEntries,
   cameraZones,
   cellSize,
   introHighwayArt,
-  msAdpcmToPcmWav,
   placeInCell,
   SOUND_ROLES,
   tileOf,
   toClip,
 } from "./convert.mjs";
+// The readers live in Studio's TS project-io; run this script with `node --import tsx`.
+import { msAdpcmToPcmWav, readArc } from "../../src/project-io/node.ts";
 
 const [cacheArg, outArg] = process.argv.slice(2);
 if (!cacheArg || !outArg) {
-  console.error("usage: node scripts/zero-import/index.mjs <cache-dir> <out-dir>");
+  console.error("usage: node --import tsx scripts/zero-import/index.mjs <cache-dir> <out-dir>");
   process.exit(1);
 }
 const cache = resolve(cacheArg);
@@ -211,7 +211,7 @@ if (!mzzxlc) {
 } else {
   const sheet = readJson(soundsPath);
   const native = join(mzzxlc, "nativePCx64");
-  const bank = arcEntries(readFileSync(join(native, "RZZC", "romPC", "Zero1SE.arc"))).filter((e) => e.name.includes("\\wav\\"));
+  const bank = readArc(readFileSync(join(native, "RZZC", "romPC", "Zero1SE.arc"))).filter((e) => e.name.includes("\\wav\\"));
   for (const [role, id] of Object.entries(SOUND_ROLES)) {
     const entry = sheet.sfx[role];
     if (entry === undefined) continue;

@@ -112,6 +112,7 @@ export {
 } from "./import/mmx1.js";
 
 export { readArc, type ArcEntry } from "./import/arc.js";
+export { msAdpcmToPcmWav, pcmWav } from "./import/adpcm.js";
 export {
   readMmz1Sprites,
   readMmz1Install,

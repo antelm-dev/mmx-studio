@@ -4,9 +4,9 @@ Turns the cache built by `zero-x-mashup/game/build_cache.py` (MMZ1 Zero + MMX1 I
 Highway, extracted from the user's own Steam installs) into a Studio project directory.
 
 ```sh
-node scripts/zero-import/index.mjs <cache-dir> <out-dir>
+node --import tsx scripts/zero-import/index.mjs <cache-dir> <out-dir>
 # e.g.
-node scripts/zero-import/index.mjs ../zero-x-mashup/game/cache ../zero-x-mashup/project
+node --import tsx scripts/zero-import/index.mjs ../zero-x-mashup/game/cache ../zero-x-mashup/project
 # then, from the mmx-core-ts checkout:
 pnpm sim -- --project ../zero-x-mashup/project
 pnpm factory:build -- --project ../zero-x-mashup/project
@@ -181,9 +181,9 @@ first Steam library (from `libraryfolders.vdf` under the default Steam folders) 
 `steamapps/common/MZZXLC`. **Without it** the script prints a message and keeps every
 template sound, so the project still builds.
 
-- `nativePCx64/RZZC/romPC/Zero1SE.arc` is an MT Framework ARC v7 (`arcEntries`): 470
+- `nativePCx64/RZZC/romPC/Zero1SE.arc` is an MT Framework ARC v7 (`readArc`, `src/project-io/import/arc.ts`): 470
   `sound\se\wav\...` entries, each a RIFF WAV in MS-ADPCM (~48 kHz stereo). `sounds.json`
-  `sfx.<role>` is an index into those wav entries. `msAdpcmToPcmWav` decodes to 16-bit
+  `sfx.<role>` is an index into those wav entries. `msAdpcmToPcmWav` (`src/project-io/import/adpcm.ts`) decodes to 16-bit
   PCM WAV, ported from zero-x-mashup `engine/src/audio.rs`: the predictor is
   `(s1 * c1 + s2 * c2) / 256` rounded toward zero (`>> 8` floors negatives and drifts).
   Checked identical to `ffmpeg -f s16le` on all 470 entries; the unit tests use a
