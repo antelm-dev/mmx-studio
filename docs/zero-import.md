@@ -72,3 +72,72 @@ rows of collision bytes per 16 px cell}`, with keys in that order.
 and the install are present: `stage.json` is byte-identical and the PNG pixels
 are identical. The PNG files are not byte-identical: Pillow uses its own
 filters, ours writes filter 0.
+
+## MMZ1 Zero and the Pantheon (`import/mmz1.ts`, `import/arc.ts`)
+
+`readMmz1Install(root, anims)` reads `nativePCx64/RZZC/ZC/DATA/obj_fnt_z1.bin`
+(tiles, palettes) and `obj_dat_z1.bin` (frames, scripts), which are plain files,
+and returns two atlases:
+
+- `zero`: the cache's `zero.png` + `zero.json`, for the streamed animations
+  `anims` (the `anim` column of `zero_moves.json`);
+- `objects`: static objects 1 (effects) and 25 (Pantheon Hunter) in the same
+  shape, keyed `"1"` and `"25"`.
+
+`zero.json` shape: `{ "<key>": { frames: [[x, y, w, h, anchorX, anchorY]],
+scripts: [[[frame, duration]]] } }`. The anchor is the character's feet inside
+the cropped frame. A duration is in 1/60 s; `0xFE` loops to step `frame`, and
+`0xFF` holds.
+
+**Banks.** Both banks start with a 161-entry u32 index, one entry per object.
+- **Streamed characters** (Zero is 0..56): the distinct, sorted offsets of
+  obj_fnt object 0 entries 64..484 (140 records).
+  - Each record holds n parts, each with a 20-byte header `{u32 data off,
+    u32 size (low 16 bits), ...}`, then the parts' 4bpp tiles back to back.
+  - The matching layout blocks are found in obj_dat, starting at `dofs[64]` (the
+    first byte after the indexed layouts), one per record in order. A block is
+    `{u32 header length, section offsets...}`.
+  - Frame table at the header length: `{u32 4, (u16 piece offset, u8 count,
+    u8 part)}`. Scripts at section 1.
+  - An optional palette section among sections 2..: `{u16 n, u16 n, n x 16
+    BGR555 colours}`. Only block 0 has one (Zero's palettes); the later blocks
+    reuse it.
+- **Static objects:**
+  - obj_fnt: `{u32 header length, u32 size, ...}`, then the tiles, then 16-colour
+    palettes up to the next object.
+  - obj_dat: `{u32 frame table offset, u32 script section offset}`.
+  - Frame entries are `(u16 piece offset, u16 count)`.
+- **Script section:** a u32 offset to a table of u16 offsets (relative to the
+  table) to step lists.
+- **Piece (OAM):** `tile` (in units of 4 tiles), `attr` (`shape << 6 | size << 4`,
+  `4` hflip, `8` vflip), `s8 x`, `s8 y`, relative to the feet.
+  - Sizes by shape: square 8/16/32/64, wide 16x8/32x8/32x16/64x32, tall
+    8x16/8x32/16x32/32x64.
+  - Each frame is drawn on a 192x192 canvas with the feet at (96, 144), first
+    piece on top, palette 0.
+  - Pixels are GBA 4bpp, low nibble first.
+- **Packing:** each frame is cropped to its opaque bbox (an empty frame keeps 1 px
+  at the origin) and packed left to right in rows of up to 1024 px.
+
+**Pantheon clips** (engine contract, mmx.ts#31; `PANTHEON_CLIPS`):
+
+| Clip | Source | Loops |
+| --- | --- | --- |
+| `idle` | object 25, script 0 | yes |
+| `walk` | object 25, script 1 | yes |
+| `aim` | object 25, script 2 | no |
+| `shoot` | object 25, script 3 | yes |
+| `hit` | object 25, frames 15-19 | no |
+| `pantheon_shot` | object 1, script 4: frames 22, 23, 25, 24 at 4/60 s | yes |
+
+GBA frames face left (MODLOG gotcha 3).
+
+**ARC v7** (`readArc`, used for the MMZ1 sound banks, e.g. `RZZC/romPC/Zero1SE.arc`):
+- header: `"ARC\0"`, u16 version 7, u16 count;
+- then count 80-byte entries `{name[64], u32 type hash, u32 compressed size,
+  u32 size (low 29 bits), u32 offset}`;
+- the data is zlib (first byte `0x78`) or stored as is.
+
+**Oracle.** `tests/project-io/mmz1.test.ts`: `zero.json` is byte-identical to
+the Python cache and `zero.png` has identical pixels. The cache has no object
+25, so the objects are only checked against the clip contract.
