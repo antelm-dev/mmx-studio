@@ -206,3 +206,76 @@ test("toggles developer tools from the Help menu", async () => {
     )
     .toBe(false);
 });
+
+test("title bar menus work by pointer and keyboard and return focus", async () => {
+  pageErrors.length = 0;
+  consoleErrors.length = 0;
+  const theme = () => page.evaluate(() => document.documentElement.dataset.theme);
+  const initialTheme = await theme();
+
+  const viewMenu = page.getByRole("button", { name: "View menu" });
+  const darkTheme = page.getByRole("menuitemcheckbox", { name: /Dark theme/ });
+  const zoomIn = page.getByRole("menuitem", { name: /Zoom In/ });
+  const zoomLabel = page.getByText(/^Zoom · \d+%$/);
+
+  // Pointer: open, read a shortcut, toggle the theme (checkbox items keep the menu open).
+  await viewMenu.click();
+  const zoomBefore = await zoomLabel.textContent();
+  await expect(zoomIn.locator("kbd")).toHaveText(/^(Ctrl|⌘)\+=$/);
+  await expect(darkTheme).toHaveAttribute("aria-checked", String(initialTheme === "dark"));
+  // Portalled above Dockview: the item is the topmost element at its own center.
+  await expect
+    .poll(() =>
+      zoomIn.evaluate((el) => {
+        const r = el.getBoundingClientRect();
+        return el.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2));
+      }),
+    )
+    .toBe(true);
+  await darkTheme.click();
+  await expect.poll(theme).not.toBe(initialTheme);
+  await expect(darkTheme).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(darkTheme).toBeHidden();
+  await expect(viewMenu).toBeFocused();
+
+  // Keyboard: ArrowDown opens on the first item, Enter toggles the theme back.
+  await page.keyboard.press("ArrowDown");
+  await expect(page.getByRole("menu")).toBeFocused();
+  await expect(darkTheme).toHaveAttribute("data-highlighted", "");
+  await page.keyboard.press("Enter");
+  await expect.poll(theme).toBe(initialTheme);
+  await page.keyboard.press("Escape");
+  await expect(darkTheme).toBeHidden();
+  await expect(viewMenu).toBeFocused();
+
+  // A regular item runs its command, closes the menu and refocuses the trigger.
+  await page.keyboard.press("ArrowDown");
+  await expect(page.getByRole("menu")).toBeFocused();
+  // Dark theme -> Fullscreen -> Grid -> Snap -> Zoom In (group labels are skipped).
+  for (let i = 0; i < 4; i++) await page.keyboard.press("ArrowDown");
+  await expect(zoomIn).toHaveAttribute("data-highlighted", "");
+  // Arrow navigation refocuses the menu on the next frame; a select before that frame loses focus to body.
+  await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
+  await page.keyboard.press("Enter");
+  await expect(zoomIn).toBeHidden();
+  await expect(viewMenu).toBeFocused();
+  await viewMenu.click();
+  await expect(zoomLabel).not.toHaveText(zoomBefore!);
+  await page.keyboard.press("Escape");
+  await expect(viewMenu).toBeFocused();
+
+  // Disabled state and labels survive in the File menu.
+  const fileMenu = page.getByRole("button", { name: "File menu" });
+  await fileMenu.click();
+  await expect(page.getByRole("group", { name: "Project" })).toBeVisible();
+  await expect(page.getByRole("menuitem", { name: /Export Project/ })).toHaveAttribute(
+    "aria-disabled",
+    "true",
+  );
+  await page.keyboard.press("Escape");
+  await expect(fileMenu).toBeFocused();
+
+  expect(pageErrors, `page errors: ${pageErrors.join("\n")}`).toEqual([]);
+  expect(consoleErrors, `console errors: ${consoleErrors.join("\n")}`).toEqual([]);
+});
