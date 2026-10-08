@@ -1,17 +1,18 @@
 // Build the Zero × MMX Studio project from the user's own Steam installs: MMX1 Intro Highway
 // (Mega Man X Legacy Collection) + MMZ1 Zero (Mega Man Zero/ZX Legacy Collection).
 // The output is Capcom-derived: it gets a catch-all .gitignore and must never be committed.
+import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import type { FileSystem } from "../fs.js";
 import { msAdpcmToPcmWav } from "./adpcm.js";
 import { readArc } from "./arc.js";
-import { cameraZones, cellSize, introHighwayArt, placeInCell, SOUND_ROLES, tileOf, toClip, X_CLIPS, type Clip, type Frame, type Region } from "./convert.js";
+import { cameraZones, FEET_BELOW_CENTRE, introHighwayArt, packFrames, SOUND_ROLES, splitScript, tileOf, toClip, X_CLIPS, type Clip, type Frame, type Region } from "./convert.js";
 import { readMmx1Install, type Mmx1Stage, type Mmx1StageJson } from "./mmx1.js";
-import { readMmz1Install, type SpriteAtlas } from "./mmz1.js";
+import { EFFECTS_OBJECT, PANTHEON_CLIPS, PANTHEON_OBJECT, PANTHEON_SHOT_CLIP, readMmz1Install, type SpriteAtlas } from "./mmz1.js";
 import { decodePng, encodePng } from "./png.js";
-import { ZERO_MOVES, ZERO_SOUNDS } from "./sheets.js";
+import { PANTHEON_SPAWNS, ZERO_MOVES, ZERO_SOUNDS } from "./sheets.js";
 import { findSteamGame } from "./steam.js";
 
 export const ZERO_PROJECT_ID = "zero.intro-highway";
@@ -20,6 +21,8 @@ export const ZERO_PROJECT_ID = "zero.intro-highway";
 export interface ZeroSources {
   stage: Mmx1Stage;
   zero: SpriteAtlas;
+  /** MMZ1 objects 1 (effects) and 25 (Pantheon), or null: then the level has no enemies. */
+  objects: SpriteAtlas | null;
   /** Engine sound id -> 16-bit PCM WAV. */
   sfx: Record<string, Uint8Array>;
   /** The stage music (Ogg Vorbis), or null. */
@@ -38,7 +41,7 @@ export async function readZeroSources(progress: Progress = () => {}): Promise<Ze
   progress("Reading MMX1 Intro Highway");
   const stage = await readMmx1Install(mmx.root);
   progress("Reading MMZ1 Zero sprites");
-  const { zero } = await readMmz1Install(mmz.root, ZERO_MOVES.map((m) => m.anim));
+  const { zero, objects } = await readMmz1Install(mmz.root, ZERO_MOVES.map((m) => m.anim));
   progress("Decoding MMZ1 sounds");
   const native = join(mmz.root, "nativePCx64");
   const bank = readArc(await readFile(join(native, "RZZC", "romPC", "Zero1SE.arc"))).filter((e) => e.name.includes("\\wav\\"));
@@ -51,12 +54,12 @@ export async function readZeroSources(progress: Progress = () => {}): Promise<Ze
   }
   // .sngw is plain Ogg Vorbis
   const music = await readFile(join(native, "sound", "bgm", "wav", ZERO_SOUNDS.music));
-  return { stage, zero, sfx, music };
+  return { stage, zero, objects, sfx, music };
 }
 
 /**
- * The same sources from a zero-x-mashup `game/cache` folder (stage.json/png, background.png, zero.json/png;
- * no sounds). Used by the e2e test (MMX_STUDIO_ZERO_IMPORT_CACHE) instead of the installs.
+ * The same sources from a zero-x-mashup `game/cache`-shaped folder (stage.json/png, background.png, zero.json/png,
+ * optional objects.json/png; no sounds). Used by the e2e test (MMX_STUDIO_ZERO_IMPORT_CACHE) instead of the installs.
  */
 export async function readZeroSourcesFromCache(dir: string): Promise<ZeroSources> {
   const png = async (name: string) => decodePng(await readFile(join(dir, name)));
@@ -64,6 +67,7 @@ export async function readZeroSourcesFromCache(dir: string): Promise<ZeroSources
   return {
     stage: { stage: await png("stage.png"), background: await png("background.png"), json: (await json("stage.json")) as Mmx1StageJson },
     zero: { atlas: await png("zero.png"), json: await json("zero.json") },
+    objects: existsSync(join(dir, "objects.json")) ? { atlas: await png("objects.png"), json: await json("objects.json") } : null,
     sfx: {},
     music: null,
   };
@@ -71,30 +75,11 @@ export async function readZeroSourcesFromCache(dir: string): Promise<ZeroSources
 
 /** Every frame in one fixed cell, 16 cells per row, mirrored so Zero faces right; then the clips. */
 export function zeroSheet({ atlas, json }: SpriteAtlas) {
-  const allFrames = Object.values(json).flatMap((a) => a.frames as Frame[]);
-  const cell = cellSize(allFrames);
-  const COLS = 16;
-  const width = COLS * cell.w;
-  const height = Math.ceil(allFrames.length / COLS) * cell.h;
-  const sheet = { width, height, px: new Uint8Array(width * height * 4) };
+  const anims = Object.entries(json);
+  const { sheet, regions: all, cell } = packFrames(atlas, anims.flatMap(([, a]) => a.frames as Frame[]), FEET_BELOW_CENTRE, true);
   const regions: Record<string, Region[]> = {};
   let n = 0;
-  for (const [anim, { frames }] of Object.entries(json)) {
-    regions[anim] = (frames as Frame[]).map((frame) => {
-      const cx = (n % COLS) * cell.w;
-      const cy = Math.floor(n / COLS) * cell.h;
-      n++;
-      const [fx, fy, w, h] = frame;
-      const { dx, dy } = placeInCell(frame, cell);
-      for (let y = 0; y < h; y++) {
-        for (let x = 0; x < w; x++) {
-          const s = ((fy + y) * atlas.width + fx + w - 1 - x) * 4; // mirrored read
-          sheet.px.set(atlas.px.subarray(s, s + 4), ((cy + dy + y) * sheet.width + cx + dx + x) * 4);
-        }
-      }
-      return [cx, cy, cell.w, cell.h] as Region;
-    });
-  }
+  for (const [anim, { frames }] of anims) regions[anim] = all.slice(n, (n += frames.length));
   const moves = Object.fromEntries(ZERO_MOVES.map((m) => [m.move, m]));
   const clipOf = (move: string, mode?: Parameters<typeof toClip>[2]) => {
     const m = moves[move];
@@ -109,8 +94,42 @@ export function zeroSheet({ atlas, json }: SpriteAtlas) {
   return { sheet, animations, cell, frames: n };
 }
 
-/** The level document: collision -> tiles + slopes, spawn at checkpoint 0, camera zones, image layers. */
-export function introHighwayLevel(stage: Mmx1StageJson) {
+// The engine draws an enemy's frame centred on its body (renderer-pixi syncEnemies); enemy.pantheon's body
+// half-height is 15 (engine data/actors.ts), so the feet anchor sits 15 px under the cell centre.
+const PANTHEON_FEET_BELOW_CENTRE = 15;
+// The Stun flinch lasts 12 frames (engine data/enemies.ts): the two hit frames share it.
+const PANTHEON_HIT_DURATIONS = [6, 6];
+
+/**
+ * The Pantheon Hunter sheet (object 25, frames left-facing like the engine's enemy sheets) with the clips
+ * enemy.pantheon plays, and its shot (object 1 script 4, mirrored to face right like the player's shots).
+ */
+export function pantheonSheets(objects: SpriteAtlas) {
+  const pantheon = objects.json[String(PANTHEON_OBJECT)];
+  const effects = objects.json[String(EFFECTS_OBJECT)];
+  if (!pantheon || !effects) throw new Error(`MMZ1 objects ${PANTHEON_OBJECT} / ${EFFECTS_OBJECT} are missing`);
+  const body = packFrames(objects.atlas, pantheon.frames as Frame[], PANTHEON_FEET_BELOW_CENTRE, false);
+  const animations: Record<string, Clip> = {};
+  for (const [name, clip] of Object.entries(PANTHEON_CLIPS)) {
+    if ("script" in clip) {
+      const script = pantheon.scripts[clip.script];
+      if (!script) throw new Error(`MMZ1 object ${PANTHEON_OBJECT} has no script ${clip.script} (clip '${name}')`);
+      animations[name] = toClip(script, (f) => body.regions[f]);
+      if (animations[name].loop !== clip.loop) throw new Error(`Pantheon clip '${name}' should ${clip.loop ? "" : "not "}loop`);
+    } else {
+      animations[name] = { loop: false, speed: 60, frames: clip.frames.map((f, i) => ({ duration: PANTHEON_HIT_DURATIONS[i], region: body.regions[f] })) };
+    }
+  }
+  const script = effects.scripts[PANTHEON_SHOT_CLIP.script];
+  if (!script) throw new Error(`MMZ1 object ${EFFECTS_OBJECT} has no script ${PANTHEON_SHOT_CLIP.script} (pantheon_shot)`);
+  const used = [...new Set(splitScript(script).steps.map((s) => s.frame))];
+  const shot = packFrames(objects.atlas, used.map((f) => effects.frames[f] as Frame), 0, true);
+  const shotClip = toClip(script, (f) => shot.regions[used.indexOf(f)]);
+  return { pantheon: { sheet: body.sheet, animations }, shot: { sheet: shot.sheet, animations: { pantheon_shot: shotClip } } };
+}
+
+/** The level document: collision -> tiles + slopes, spawn at checkpoint 0, camera zones, Pantheons, image layers. */
+export function introHighwayLevel(stage: Mmx1StageJson, withEnemies: boolean) {
   const tiles: number[] = [];
   const slopes: Record<number, [number, number]> = {};
   for (const row of stage.collision) {
@@ -132,6 +151,9 @@ export function introHighwayLevel(stage: Mmx1StageJson) {
     objects: [
       { id: "spawn-checkpoint-0", definitionId: "spawn", x: stage.spawn[0], y: stage.spawn[1] },
       ...cameraZones(stage.cameras, stage.w * stage.cell, stage.h * stage.cell),
+      ...(withEnemies
+        ? PANTHEON_SPAWNS.filter(([x, y]) => x < stage.w * stage.cell && y < stage.h * stage.cell).map(([x, y], i) => ({ id: `pantheon-${i}`, definitionId: "enemy.pantheon", x, y }))
+        : []),
     ],
     decorations: [],
     ...introHighwayArt(stage.backdrop),
@@ -158,13 +180,29 @@ export async function writeZeroProject(out: FileSystem, template: FileSystem, sr
   await out.writeBytes("assets/sprites/player/zero.png", encodePng(sheet));
   await json("assets/sprites/player/zero_anims.json", { animations });
 
-  const level = introHighwayLevel(src.stage.json);
+  const level = introHighwayLevel(src.stage.json, src.objects !== null);
   await json("levels/level.intro-highway.json", level);
   const artAssets = [];
   for (const name of ["stage", "background"] as const) {
     const path = `assets/images/${name}.png`;
     await out.writeBytes(path, encodePng(src.stage[name]));
     artAssets.push({ id: `image.${name}`, kind: "image", path });
+  }
+
+  const enemyAssets = [];
+  const enemyAnimations: Record<string, string> = {};
+  const enemyShots: Record<string, string> = {};
+  if (src.objects) {
+    const { pantheon, shot } = pantheonSheets(src.objects);
+    for (const [sheet, path, anim, sprite, clips] of [
+      [pantheon.sheet, "assets/sprites/enemies/pantheon.png", "anim.enemy.pantheon", "sprite.enemies.pantheon", pantheon.animations],
+      [shot.sheet, "assets/sprites/effects/pantheon_shot.png", "anim.effect.pantheon_shot", "sprite.effects.pantheon-shot", shot.animations],
+    ] as const) {
+      await out.writeBytes(path, encodePng(sheet));
+      enemyAssets.push({ id: anim, kind: "animation", path, sheetAssetId: sprite, animations: clips }, { id: sprite, kind: "sprite", path });
+    }
+    enemyAnimations.pantheon = "anim.enemy.pantheon";
+    enemyShots.pantheon_shot = "anim.effect.pantheon_shot";
   }
 
   const zeroSounds: Record<string, string> = {};
@@ -209,6 +247,7 @@ export async function writeZeroProject(out: FileSystem, template: FileSystem, sr
       { id: "anim.player.zero", kind: "animation", path: "assets/sprites/player/zero.png", sheetAssetId: "sprite.player.zero", animations },
       { id: "sprite.player.zero", kind: "sprite", path: "assets/sprites/player/zero.png" },
       ...artAssets,
+      ...enemyAssets,
       ...soundAssets,
       ...borrowedAssets,
     ],
@@ -218,9 +257,10 @@ export async function writeZeroProject(out: FileSystem, template: FileSystem, sr
     bindings: {
       playerAnimation: "anim.player.zero",
       ...borrowed,
+      shotAnimations: { ...borrowed.shotAnimations, ...enemyShots },
       sounds: { ...borrowed.sounds, ...zeroSounds },
       ...(src.music && { music: { stage: "music.stage" } }),
-      enemyAnimations: {},
+      enemyAnimations,
       pickupAnimations: {},
     },
   });
@@ -232,5 +272,6 @@ export async function writeZeroProject(out: FileSystem, template: FileSystem, sr
     tiles: [level.cols, level.rows],
     slopes: Object.keys(level.slopes).length,
     sounds: Object.keys(zeroSounds).length,
+    enemies: level.objects.filter((o) => o.definitionId === "enemy.pantheon").length,
   };
 }

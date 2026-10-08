@@ -217,7 +217,8 @@ export const PANTHEON_CLIPS = {
   walk: { script: 1, loop: true },
   aim: { script: 2, loop: false },
   shoot: { script: 3, loop: true },
-  hit: { frames: [15, 16, 17, 18, 19], loop: false },
+  // frames 17-19 (and 14) are death debris pieces, not flinch poses (seen in the game sheet), so hit stops at 16
+  hit: { frames: [15, 16], loop: false },
 } as const;
 export const PANTHEON_SHOT_CLIP = { object: EFFECTS_OBJECT, script: 4, loop: true } as const;
 

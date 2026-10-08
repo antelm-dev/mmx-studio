@@ -51,6 +51,8 @@ assets/sprites/player/zero.png       repacked sheet
 assets/sprites/player/zero_anims.json  { animations } (same clips as in project.json)
 assets/sounds/zero/<id>.wav          MMZ1 effects decoded to 16-bit PCM
 assets/music/stage.ogg               MMZ1 stage music, music.stage, bound as music.stage
+assets/sprites/enemies/pantheon.png  Pantheon Hunter sheet (anim.enemy.pantheon + sprite.enemies.pantheon)
+assets/sprites/effects/pantheon_shot.png  its shot (anim.effect.pantheon_shot + sprite.effects.pantheon-shot)
 assets/{sprites/hud,sprites/effects,sounds,fonts}/...  copied from templates/mmx-demo
 ATTRIBUTION.md                       copied from templates/mmx-demo
 .gitignore                           catch-all: the folder is Capcom-derived
@@ -98,6 +100,23 @@ abilities play are then added:
 
 Death hides the player sprite and plays no clip. AirDash and DashJump reuse `dash` and
 `jump`; X's other clips (`airdash`, `crouch`, `shot_*`, ...) are not played by any ability.
+
+### Pantheon sheet
+
+`pantheonSheets(objects)` packs object 25's 20 frames into fixed cells, 16
+per row (`packFrames`):
+- The frames are **not** mirrored: the engine's enemy sheets face left, like
+  the GBA frames (renderer-pixi draws enemies with scale `-facing`).
+- The feet anchor sits 15 px under the cell centre, because renderer-pixi
+  centres an enemy frame on its body and `enemy.pantheon`'s body half-height
+  is 15.
+- The clips follow `PANTHEON_CLIPS` (see the table under MMZ1 below).
+  `toClip` converts the scripts, and each clip is checked to loop or not as
+  the engine expects.
+
+The shot is built from the frames object 1 script 4 uses (22, 23, 25, 24). They
+are mirrored to face right like the player's shots, with the anchor at the cell
+centre, into the looping clip `pantheon_shot`.
 
 ### Level
 
@@ -153,14 +172,22 @@ The art becomes two `imageLayers`, both at (0, 0), plus the level `backdrop`:
 `backdrop` is palette colour 0 (`stage.json` `backdrop`) as `#rrggbb`; it fills
 whatever both images leave transparent.
 
-Not converted yet: enemies (the Pantheon comes with #28).
+#### Enemies
+
+The level gets seven `enemy.pantheon` objects (`pantheon-<i>`) at the
+`PANTHEON_SPAWNS` positions (`import/sheets.ts`, moved from zero-x-mashup
+`enemies.json`; placed by eye, not MMX1 data). The y of 300 is above the road,
+so they drop onto it when the level starts. The first two are on the road
+before the gap at x = 800; the others are on the raised section after it.
 
 ### Bindings
 
 `game/data.json` binds `playerAnimation` to Zero and `music.stage` to the MMZ1 stage track (engine `bindings.music.stage`, runtime id `musicStage`, looped while a level plays, in the browser build and in Studio Play), with no `playerPointingSheet` since
 Zero has no detached arm (the renderer then draws the arm layer from the normal sheet).
-`enemyAnimations` and `pickupAnimations` stay empty: the level has no enemies or
-pickups and the build accepts empty maps.
+`enemyAnimations.pantheon` binds the Pantheon sheet, and
+`shotAnimations.pantheon_shot` is added to the borrowed shot clips.
+`pickupAnimations` stays empty: the level has no pickups and the build accepts
+an empty map.
 
 ### Borrowed from the template
 
@@ -334,7 +361,7 @@ the cropped frame. A duration is in 1/60 s; `0xFE` loops to step `frame`, and
 | `walk` | object 25, script 1 | yes |
 | `aim` | object 25, script 2 | no |
 | `shoot` | object 25, script 3 | yes |
-| `hit` | object 25, frames 15-19 | no |
+| `hit` | object 25, frames 15-16, 6/60 s each (the Stun lasts 12 frames); 17-19 and 14 are death debris | no |
 | `pantheon_shot` | object 1, script 4: frames 22, 23, 25, 24 at 4/60 s | yes |
 
 GBA frames face left (MODLOG gotcha 3).

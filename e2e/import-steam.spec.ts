@@ -49,8 +49,10 @@ test("File → Import from Steam installs builds the Zero project and opens it",
   expect(manifest.player).toEqual({ loadout: "player.zero" });
   expect(existsSync(join(out, "assets/sprites/player/zero.png"))).toBe(true);
   expect(readFileSync(join(out, ".gitignore"), "utf8")).toContain("never commit");
+  const level = JSON.parse(readFileSync(join(out, "levels/level.intro-highway.json"), "utf8"));
+  expect(level.objects.filter((o: { definitionId: string }) => o.definitionId === "enemy.pantheon")).toHaveLength(2);
 
-  // The imported project plays as Zero.
+  // The imported project plays as Zero, with its Pantheons.
   await page.getByRole("button", { name: /^Play$/ }).click();
   await expect(page.locator("#play-canvas")).toBeVisible({ timeout: 30_000 });
   await expect(page.getByText(/Could not start Play/)).toHaveCount(0);
