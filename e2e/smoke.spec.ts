@@ -117,6 +117,12 @@ test("toolbar tooltip, level menu, and toggles work above Dockview", async () =>
   await levelMenu.click();
   await expect(newLevel).toBeHidden();
 
+  // Selecting an item runs its editor command (fresh doc, so no discard confirm).
+  await levelMenu.click();
+  await newLevel.click();
+  await expect(newLevel).toBeHidden();
+  await expect(page.getByRole("status").filter({ hasText: "New level created." })).toBeVisible();
+
   expect(pageErrors, `page errors: ${pageErrors.join("\n")}`).toEqual([]);
   expect(consoleErrors, `console errors: ${consoleErrors.join("\n")}`).toEqual([]);
 });

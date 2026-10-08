@@ -17,7 +17,11 @@ const ToolbarButtonBase = chakra("button", {
     cursor: "pointer",
     transition: "colors",
     transitionDuration: "100ms",
-    _hover: { bg: "studio.hover", color: "studio.fg" },
+    _hover: {
+      bg: "studio.hover",
+      color: "studio.fg",
+      _disabled: { bg: "transparent", color: "studio.fgSecondary" },
+    },
     _disabled: { opacity: 0.4, cursor: "default" },
   },
   variants: {
